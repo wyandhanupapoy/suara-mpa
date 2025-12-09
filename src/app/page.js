@@ -1,3 +1,5 @@
+"use client"; // WAJIB ADA untuk Next.js App Router jika pakai useState/useEffect
+
 import React, { useState, useEffect } from 'react';
 import { 
   Megaphone, 
@@ -43,21 +45,32 @@ import {
 } from 'firebase/firestore';
 
 // --- FIREBASE CONFIGURATION & INIT ---
-// In a real Vercel deployment, these would come from process.env
-const firebaseConfig = {
-  apiKey: "AIzaSyAraMRc8w3Fst9kX4_c8uEJHeK6KKoCOMg",
-  authDomain: "suara-mpa.firebaseapp.com",
-  projectId: "suara-mpa",
-  storageBucket: "suara-mpa.firebasestorage.app",
-  messagingSenderId: "543383148892",
-  appId: "1:543383148892:web:88737965ec5fc0bacd4999",
-  measurementId: "G-SFCFQV53R1"
-};
-const appId = 'suara-mpa';
+// Supports both Local/Vercel (env vars) and Artifact/Immersive (global var)
+const firebaseConfig = typeof __firebase_config !== 'undefined' 
+  ? JSON.parse(__firebase_config) 
+  : {
+      apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+      authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+      storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+      messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+      appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
+    };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+const appId = (typeof __app_id !== 'undefined' ? __app_id : null) || process.env.NEXT_PUBLIC_APP_ID || 'mpa-himakom';
+
+// Initialize Firebase only once
+let app;
+let auth;
+let db;
+
+try {
+  app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = getFirestore(app);
+} catch (error) {
+  console.error("Firebase initialization error:", error);
+}
 
 // --- UTILITY FUNCTIONS ---
 const generateTrackingCode = () => {
@@ -392,6 +405,7 @@ const TrackingView = ({ db, appId }) => {
      // In a real app with proper security rules, we would query strictly by ID.
      // For this prototype/setup where we can't deploy custom backend indexes easily,
      // we fetch the collection and filter client side.
+     if (!db) return;
      const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'aspirations'));
      const unsubscribe = onSnapshot(q, (snapshot) => {
        const docs = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
@@ -554,6 +568,7 @@ const AdminDashboard = ({ db, appId }) => {
   const [replyText, setReplyText] = useState('');
 
   useEffect(() => {
+    if (!db) return;
     const q = query(
       collection(db, 'artifacts', appId, 'public', 'data', 'aspirations'),
       orderBy('created_at', 'desc')
@@ -718,6 +733,8 @@ export default function App() {
 
   // Auth Handling
   useEffect(() => {
+    if (!auth) return;
+    
     const initAuth = async () => {
         // First, check if we have a custom token from the environment (Provided by Gemini/System)
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
