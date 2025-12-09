@@ -238,11 +238,8 @@ const Header = ({ currentView, setView, isAdmin, handleLogout }) => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           
-          {/* --- LOGO GROUP FROM USER --- */}
-          <div 
-            className="flex items-center gap-3 cursor-pointer group select-none"
-            onClick={() => !isAdmin && setView('landing')}
-          >
+          {/* --- NEW LOGO GROUP --- */}
+          <div className="flex items-center gap-3 cursor-pointer group select-none" onClick={() => !isAdmin && setView('landing')}>
             <div className="flex -space-x-3 transition-all duration-500 group-hover:space-x-0">
               <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-white border-2 border-slate-50 shadow-md flex items-center justify-center relative z-20">
                 <img src="/Logo_MPA.png" alt="MPA" className="w-full h-full object-cover" onError={(e) => e.target.style.display = 'none'} />
@@ -262,15 +259,12 @@ const Header = ({ currentView, setView, isAdmin, handleLogout }) => {
               </span>
             </div>
             {/* LOGO POLBAN DI KANAN */}
-            {/* Garis Pemisah Tipis */}
             <div className="h-8 w-px bg-slate-200 mx-1 hidden md:block"></div>
-
-            {/* Logo Polban */}
             <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-white border-2 border-slate-50 shadow-sm flex items-center justify-center overflow-hidden transition-transform group-hover:scale-105">
               <img src="/logo-polban.png" alt="POLBAN" className="w-full h-full object-contain p-1" onError={(e) => e.target.style.display = 'none'} />
             </div>
           </div>
-          {/* --- END LOGO GROUP --- */}
+          {/* --- END NEW LOGO GROUP --- */}
 
           <nav className="hidden md:flex items-center space-x-6">
             {isAdmin ? (
@@ -638,8 +632,11 @@ const SuccessModal = ({ trackingCode, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-        <div className="bg-white rounded-[2rem] max-w-md w-full p-8 text-center shadow-2xl animate-scale-in border border-white/20 relative">
+    // FIX: Changed from fixed/absolute overlay to a relative flex container 
+    // that fills the main content area (min-h-[60vh]).
+    // This pushes the footer down naturally instead of overlapping it.
+    <div className="flex items-center justify-center min-h-[60vh] p-4 animate-fade-in">
+        <div className="bg-white rounded-[2rem] max-w-md w-full p-8 text-center shadow-2xl border border-slate-100 relative">
         <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 text-green-600 shadow-inner">
             <CheckCircle size={48} />
         </div>
