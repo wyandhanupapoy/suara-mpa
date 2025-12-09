@@ -23,7 +23,9 @@ import {
   Trash2,
   Instagram, 
   Phone,     
-  MessageCircle 
+  MessageCircle,
+  Copy,     // Added Icon
+  Check     // Added Icon
 } from 'lucide-react';
 
 // --- FIREBASE IMPORTS ---
@@ -624,6 +626,14 @@ const AspirationForm = ({ onSubmit }) => {
 };
 
 const SuccessModal = ({ trackingCode, onClose }) => {
+  const [copied, setCopied] = useState(false); // Add state for copy feedback
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(trackingCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   const handleWhatsAppRedirect = () => {
     const phoneNumber = "6283870405395";
     const text = `Halo Admin MPA, saya ingin menyimpan kode tracking aspirasi saya: ${trackingCode}`;
@@ -632,35 +642,61 @@ const SuccessModal = ({ trackingCode, onClose }) => {
   };
 
   return (
-    // FIX: Changed from fixed/absolute overlay to a relative flex container 
-    // that fills the main content area (min-h-[60vh]).
-    // This pushes the footer down naturally instead of overlapping it.
-    <div className="flex items-center justify-center min-h-[60vh] p-4 animate-fade-in">
-        <div className="bg-white rounded-[2rem] max-w-md w-full p-8 text-center shadow-2xl border border-slate-100 relative">
-        <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 text-green-600 shadow-inner">
-            <CheckCircle size={48} />
-        </div>
-        <h3 className="text-3xl font-bold text-slate-900 mb-2">Aspirasi Terkirim!</h3>
-        <p className="text-slate-600 mb-8 leading-relaxed">Terima kasih telah bersuara. Simpan kode Anda untuk melacak progress aspirasi.</p>
+    // Updated Layout: Relative flex container to push footer down
+    <div className="flex flex-col items-center justify-center min-h-[70vh] p-4 animate-fade-in w-full">
+      <div className="bg-white rounded-[2rem] max-w-lg w-full p-8 md:p-10 text-center shadow-2xl border border-blue-50 relative overflow-hidden">
+        {/* Decorative background blur */}
+        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 to-green-400"></div>
         
-        <div className="bg-slate-50 p-6 rounded-2xl mb-6 border border-slate-200 border-dashed relative group cursor-pointer" onClick={() => {navigator.clipboard.writeText(trackingCode); alert("Kode disalin!")}}>
-            <div className="absolute top-2 right-2 text-xs text-blue-500 font-medium opacity-0 group-hover:opacity-100 transition-opacity">Klik untuk salin</div>
-            <p className="text-xs text-slate-500 uppercase tracking-widest font-bold mb-2">Kode Tracking Anda</p>
-            <div className="text-4xl font-mono font-bold text-blue-800 tracking-wider break-all">{trackingCode}</div>
+        <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 text-green-600 shadow-sm ring-4 ring-green-50">
+          <CheckCircle size={40} strokeWidth={3} />
+        </div>
+        
+        <h3 className="text-3xl font-bold text-slate-900 mb-3">Aspirasi Terkirim!</h3>
+        <p className="text-slate-600 mb-8 leading-relaxed">
+          Terima kasih telah bersuara. Mohon simpan kode di bawah ini untuk melacak status aspirasi Anda.
+        </p>
+        
+        {/* Code Box */}
+        <div 
+          className="bg-slate-50 p-6 rounded-2xl mb-8 border-2 border-slate-200 border-dashed relative group cursor-pointer transition-all hover:border-blue-400 hover:bg-blue-50/30"
+          onClick={handleCopy}
+        >
+          <div className="absolute top-3 right-3">
+             {copied ? (
+                <span className="text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded-md flex items-center gap-1 animate-fade-in">
+                  <Check size={12}/> Tersalin
+                </span>
+             ) : (
+                <span className="text-xs font-bold text-slate-400 bg-white border border-slate-200 px-2 py-1 rounded-md flex items-center gap-1 group-hover:text-blue-500 group-hover:border-blue-200 transition-colors">
+                  <Copy size={12}/> <span className="hidden sm:inline">Klik Salin</span>
+                </span>
+             )}
+          </div>
+          <p className="text-xs text-slate-500 uppercase tracking-widest font-bold mb-2">Kode Tracking Anda</p>
+          <div className="text-4xl sm:text-5xl font-mono font-black text-blue-800 tracking-wider break-all drop-shadow-sm">
+            {trackingCode}
+          </div>
         </div>
 
-        <div className="space-y-3">
-            <button 
-                onClick={handleWhatsAppRedirect}
-                className="w-full py-4 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition-colors shadow-lg shadow-green-900/20 flex items-center justify-center gap-2"
-            >
-                <MessageCircle size={20} /> Simpan Kode di WhatsApp
-            </button>
-            <button onClick={onClose} className="w-full py-4 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors">
-                Kembali ke Beranda
-            </button>
+        {/* Actions */}
+        <div className="space-y-4">
+          <button 
+            onClick={handleWhatsAppRedirect}
+            className="w-full py-4 bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold rounded-xl transition-all shadow-lg shadow-green-900/20 flex items-center justify-center gap-3 group transform hover:-translate-y-0.5"
+          >
+            <MessageCircle size={24} className="group-hover:scale-110 transition-transform"/> 
+            <span>Simpan Kode ke WhatsApp</span>
+          </button>
+          
+          <button 
+            onClick={onClose} 
+            className="w-full py-4 bg-white text-slate-600 border border-slate-200 font-bold rounded-xl hover:bg-slate-50 hover:text-slate-900 transition-colors flex items-center justify-center gap-2"
+          >
+            Kembali ke Beranda
+          </button>
         </div>
-        </div>
+      </div>
     </div>
   );
 };
