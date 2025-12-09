@@ -18,7 +18,6 @@ import {
   LogOut,
   LayoutDashboard,
   Inbox,
-  Award,
   Scale
 } from 'lucide-react';
 
@@ -129,16 +128,34 @@ const Header = ({ currentView, setView, isAdmin, handleLogout }) => {
             onClick={() => setView('landing')}
           >
             <div className="flex space-x-2 items-center">
-              {/* Logo Placeholders using Icons */}
-              <div className="w-10 h-10 bg-blue-900 rounded-full flex items-center justify-center text-white shadow-lg" title="MPA">
-                <Scale size={20} />
-              </div>
-              <div className="hidden md:flex w-10 h-10 bg-sky-600 rounded-full items-center justify-center text-white shadow-md opacity-80 group-hover:opacity-100 transition-all" title="HIMAKOM">
-                <FileText size={20} />
-              </div>
-              <div className="hidden md:flex w-10 h-10 bg-orange-500 rounded-full items-center justify-center text-white shadow-md opacity-80 group-hover:opacity-100 transition-all" title="POLBAN">
-                <Award size={20} />
-              </div>
+              {/* Logo Images - Pastikan file ada di folder public/ di Next.js */}
+              <img 
+                src="/Logo_MPA.png" 
+                alt="MPA" 
+                className="w-10 h-10 object-contain drop-shadow-md bg-white rounded-full"
+                onError={(e) => {
+                  e.target.onerror = null; 
+                  e.target.src="https://placehold.co/40x40/1e3a8a/FFF?text=MPA"; // Fallback jika gambar tidak ada
+                }} 
+              />
+              <img 
+                src="/Logo_HIMAKOM.png" 
+                alt="HIMAKOM" 
+                className="hidden md:block w-10 h-10 object-contain drop-shadow-md bg-white rounded-full opacity-90 group-hover:opacity-100 transition-all"
+                onError={(e) => {
+                  e.target.onerror = null; 
+                  e.target.src="https://placehold.co/40x40/0284c7/FFF?text=HIMA";
+                }}
+              />
+              <img 
+                src="/Logo_POLBAN.png" 
+                alt="POLBAN" 
+                className="hidden md:block w-10 h-10 object-contain drop-shadow-md bg-white rounded-full opacity-90 group-hover:opacity-100 transition-all"
+                onError={(e) => {
+                  e.target.onerror = null; 
+                  e.target.src="https://placehold.co/40x40/f97316/FFF?text=POL";
+                }}
+              />
             </div>
             <div className="flex flex-col">
               <span className="font-bold text-slate-800 text-lg leading-tight">SUARA MPA</span>
@@ -554,7 +571,7 @@ const AdminLogin = ({ auth, onLoginSuccess }) => {
           </button>
         </form>
         <div className="mt-4 text-center">
-             <p className="text-xs text-slate-400">Belum punya akun? Hubungi Super Admin atau buat user di Firebase Console.</p>
+             <p className="text-xs text-slate-400">Login Admin MPA.</p>
         </div>
       </div>
     </div>
