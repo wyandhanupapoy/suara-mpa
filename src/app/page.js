@@ -20,7 +20,10 @@ import {
   Inbox,
   Scale,
   Filter,
-  Trash2
+  Trash2,
+  Instagram, // Added Icon
+  Phone,     // Added Icon
+  MessageCircle // Added Icon for WA
 } from 'lucide-react';
 
 // --- FIREBASE IMPORTS ---
@@ -235,26 +238,31 @@ const Header = ({ currentView, setView, isAdmin, handleLogout }) => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           
+          {/* Logo Group */}
           <div 
-            className="flex items-center gap-4 cursor-pointer group" 
+            className="flex items-center cursor-pointer group" 
             onClick={() => !isAdmin && setView('landing')}
           >
-            <div className="relative w-12 h-10 flex items-center justify-center">
+            {/* Logo Images Wrapper */}
+            <div className="relative h-10 w-16 mr-3"> {/* Width allows space for overlap */}
+               {/* Logo MPA - Top Layer */}
                <img 
-                src="/Logo_HIMAKOM.png" 
-                alt="HIMAKOM" 
-                className="absolute w-10 h-10 object-contain drop-shadow-md bg-white rounded-full z-10 transition-transform duration-300 ease-in-out group-hover:translate-x-6 opacity-0 group-hover:opacity-100 lg:opacity-100"
-                onError={(e) => { e.target.onerror = null; e.target.src="https://placehold.co/40x40/0284c7/FFF?text=H"; }}
-              />
-              <img 
                 src="/Logo_MPA.png" 
                 alt="MPA" 
-                className="absolute w-10 h-10 object-contain drop-shadow-md bg-white rounded-full z-20 transition-transform duration-300 ease-in-out group-hover:-translate-x-2"
+                className="absolute left-0 z-20 w-10 h-10 object-contain drop-shadow-md bg-white rounded-full"
                 onError={(e) => { e.target.onerror = null; e.target.src="https://placehold.co/40x40/1e3a8a/FFF?text=M"; }} 
+              />
+              {/* Logo HIMAKOM - Bottom Layer (Offset to show 3/4) */}
+              <img 
+                src="/Logo_HIMAKOM.png" 
+                alt="HIMAKOM" 
+                className="absolute left-3 z-10 w-10 h-10 object-contain drop-shadow-md bg-white rounded-full transition-transform duration-500 ease-out group-hover:translate-x-8"
+                onError={(e) => { e.target.onerror = null; e.target.src="https://placehold.co/40x40/0284c7/FFF?text=H"; }}
               />
             </div>
 
-            <div className="flex items-center gap-3">
+            {/* Text Wrapper - Moves right on hover */}
+            <div className="flex items-center gap-3 transition-transform duration-500 ease-out group-hover:translate-x-6">
               <div className="flex flex-col">
                 <span className="font-bold text-slate-800 text-lg leading-tight flex items-center gap-2">
                   SUARA MPA HIMAKOM
@@ -345,9 +353,10 @@ const Header = ({ currentView, setView, isAdmin, handleLogout }) => {
   );
 };
 
-// --- NEW COMPONENT: Public Table ---
+// --- UPDATED COMPONENT: Public Table with Search & Scroll ---
 const PublicAspirationsTable = ({ db, appId, user }) => {
   const [data, setData] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     // Guard: Don't run query if DB not init OR user not authenticated yet
@@ -366,27 +375,44 @@ const PublicAspirationsTable = ({ db, appId, user }) => {
     return () => unsubscribe();
   }, [db, appId, user]);
 
+  const filteredData = data.filter(item => 
+    item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.tracking_code.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="mt-20 max-w-7xl mx-auto px-4 pb-20">
       <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="p-6 border-b border-slate-200 bg-slate-50/50 flex justify-between items-center">
+        <div className="p-6 border-b border-slate-200 bg-slate-50/50 flex flex-col md:flex-row justify-between items-center gap-4">
           <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
             <Inbox size={20} className="text-blue-600"/> Daftar Aspirasi Masuk
           </h3>
-          <span className="text-sm text-slate-500">{data.length} Aspirasi</span>
+          <div className="relative w-full md:w-64">
+            <input 
+                type="text" 
+                placeholder="Cari aspirasi..." 
+                className="w-full pl-9 pr-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={14} />
+          </div>
         </div>
-        <div className="overflow-x-auto">
+        
+        {/* Scrollable Container with Fixed Height (~5 rows) */}
+        <div className="overflow-y-auto max-h-[350px]">
           <table className="w-full text-left text-sm text-slate-600">
-            <thead className="bg-slate-50 text-slate-700 font-bold uppercase text-xs tracking-wider">
+            <thead className="bg-slate-50 text-slate-700 font-bold uppercase text-xs tracking-wider sticky top-0 z-10 shadow-sm">
               <tr>
-                <th className="px-6 py-4">Tanggal</th>
-                <th className="px-6 py-4">Kategori</th>
-                <th className="px-6 py-4">Judul</th>
-                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4 bg-slate-50">Tanggal</th>
+                <th className="px-6 py-4 bg-slate-50">Kategori</th>
+                <th className="px-6 py-4 bg-slate-50">Judul</th>
+                <th className="px-6 py-4 bg-slate-50">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {data.map((item) => (
+              {filteredData.map((item) => (
                 <tr key={item.id} className="hover:bg-blue-50/30 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">{formatDate(item.created_at)}</td>
                   <td className="px-6 py-4">
@@ -400,15 +426,18 @@ const PublicAspirationsTable = ({ db, appId, user }) => {
                   </td>
                 </tr>
               ))}
-              {data.length === 0 && (
+              {filteredData.length === 0 && (
                  <tr>
                     <td colSpan="4" className="px-6 py-12 text-center text-slate-400">
-                        {user ? "Belum ada data aspirasi publik." : "Memuat data..."}
+                        {user ? (searchTerm ? "Tidak ada hasil pencarian." : "Belum ada data aspirasi publik.") : "Memuat data..."}
                     </td>
                  </tr>
               )}
             </tbody>
           </table>
+        </div>
+        <div className="bg-slate-50 p-2 text-center text-xs text-slate-400 border-t border-slate-100">
+            Scroll untuk melihat lebih banyak
         </div>
       </div>
     </div>
@@ -606,27 +635,44 @@ const AspirationForm = ({ onSubmit }) => {
   );
 };
 
-const SuccessModal = ({ trackingCode, onClose }) => (
-  <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-    <div className="bg-white rounded-[2rem] max-w-md w-full p-8 text-center shadow-2xl animate-scale-in border border-white/20">
-      <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 text-green-600 shadow-inner">
-        <CheckCircle size={48} />
-      </div>
-      <h3 className="text-3xl font-bold text-slate-900 mb-2">Aspirasi Terkirim!</h3>
-      <p className="text-slate-600 mb-8 leading-relaxed">Terima kasih telah bersuara. Aspirasimu telah kami terima dan akan segera diproses.</p>
-      
-      <div className="bg-slate-50 p-6 rounded-2xl mb-8 border border-slate-200 border-dashed relative group cursor-pointer" onClick={() => {navigator.clipboard.writeText(trackingCode); alert("Kode disalin!")}}>
-        <div className="absolute top-2 right-2 text-xs text-blue-500 font-medium opacity-0 group-hover:opacity-100 transition-opacity">Klik untuk salin</div>
-        <p className="text-xs text-slate-500 uppercase tracking-widest font-bold mb-2">Kode Tracking Anda</p>
-        <div className="text-4xl font-mono font-bold text-blue-800 tracking-wider break-all">{trackingCode}</div>
-      </div>
+const SuccessModal = ({ trackingCode, onClose }) => {
+  const handleWhatsAppRedirect = () => {
+    const phoneNumber = "6283870405395";
+    const text = `Halo Admin MPA, saya ingin menyimpan kode tracking aspirasi saya: ${trackingCode}`;
+    const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  };
 
-      <button onClick={onClose} className="w-full py-4 bg-blue-800 text-white font-bold rounded-xl hover:bg-blue-900 transition-colors shadow-lg shadow-blue-900/20">
-        Kembali ke Beranda
-      </button>
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+        <div className="bg-white rounded-[2rem] max-w-md w-full p-8 text-center shadow-2xl animate-scale-in border border-white/20">
+        <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 text-green-600 shadow-inner">
+            <CheckCircle size={48} />
+        </div>
+        <h3 className="text-3xl font-bold text-slate-900 mb-2">Aspirasi Terkirim!</h3>
+        <p className="text-slate-600 mb-8 leading-relaxed">Terima kasih telah bersuara. Simpan kode Anda untuk melacak progress aspirasi.</p>
+        
+        <div className="bg-slate-50 p-6 rounded-2xl mb-6 border border-slate-200 border-dashed relative group cursor-pointer" onClick={() => {navigator.clipboard.writeText(trackingCode); alert("Kode disalin!")}}>
+            <div className="absolute top-2 right-2 text-xs text-blue-500 font-medium opacity-0 group-hover:opacity-100 transition-opacity">Klik untuk salin</div>
+            <p className="text-xs text-slate-500 uppercase tracking-widest font-bold mb-2">Kode Tracking Anda</p>
+            <div className="text-4xl font-mono font-bold text-blue-800 tracking-wider break-all">{trackingCode}</div>
+        </div>
+
+        <div className="space-y-3">
+            <button 
+                onClick={handleWhatsAppRedirect}
+                className="w-full py-4 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition-colors shadow-lg shadow-green-900/20 flex items-center justify-center gap-2"
+            >
+                <MessageCircle size={20} /> Simpan Kode di WhatsApp
+            </button>
+            <button onClick={onClose} className="w-full py-4 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors">
+                Kembali ke Beranda
+            </button>
+        </div>
+        </div>
     </div>
-  </div>
-);
+  );
+};
 
 const TrackingView = ({ db, appId, user }) => {
   const [code, setCode] = useState('');
@@ -1141,8 +1187,18 @@ export default function App() {
       {!isAdmin && (
         <footer className="bg-slate-900 text-slate-400 py-12 border-t border-slate-800 relative z-10 mt-auto">
             <div className="max-w-7xl mx-auto px-4 text-center">
-            <div className="flex items-center justify-center gap-2 mb-4 text-white font-bold text-xl">
-                <Scale size={24} className="text-blue-500" /> MPA HIMAKOM
+            <div className="flex flex-col md:flex-row justify-center items-center gap-6 md:gap-12 mb-8">
+                <div className="flex items-center gap-2 text-white font-bold text-xl">
+                    <Scale size={24} className="text-blue-500" /> MPA HIMAKOM
+                </div>
+                <div className="flex items-center gap-6">
+                    <a href="https://instagram.com/mpahimakom" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+                        <Instagram size={20} /> @mpahimakom
+                    </a>
+                    <a href="https://wa.me/6283870405395" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+                        <Phone size={20} /> 0838-7040-5395
+                    </a>
+                </div>
             </div>
             <p className="mb-6 text-sm max-w-md mx-auto leading-relaxed opacity-80">
                 Media aspirasi resmi Majelis Perwakilan Anggota HIMAKOM POLBAN.
