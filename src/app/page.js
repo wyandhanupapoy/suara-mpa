@@ -1,4 +1,4 @@
-"use client"; // WAJIB ADA untuk Next.js App Router jika pakai useState/useEffect
+"use client";
 
 import React, { useState, useEffect, useRef } from 'react';
 import { 
@@ -19,7 +19,8 @@ import {
   LayoutDashboard,
   Inbox,
   Scale,
-  Filter
+  Filter,
+  Trash2
 } from 'lucide-react';
 
 // --- FIREBASE IMPORTS ---
@@ -40,6 +41,7 @@ import {
   onSnapshot, 
   doc, 
   updateDoc, 
+  deleteDoc, 
   serverTimestamp,
   orderBy
 } from 'firebase/firestore';
@@ -58,7 +60,6 @@ const firebaseConfig = typeof __firebase_config !== 'undefined'
 
 const appId = (typeof __app_id !== 'undefined' ? __app_id : null) || process.env.NEXT_PUBLIC_APP_ID || 'mpa-himakom';
 
-// Initialize Firebase only once
 let app;
 let auth;
 let db;
@@ -85,7 +86,7 @@ const formatDate = (timestamp) => {
   if (!timestamp) return '-';
   const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
   return new Intl.DateTimeFormat('id-ID', {
-    day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    day: 'numeric', month: 'short', year: 'numeric'
   }).format(date);
 };
 
@@ -119,6 +120,7 @@ const ParticleBackground = () => {
 
   useEffect(() => {
     const canvas = canvasRef.current;
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
     let animationFrameId;
     let particles = [];
@@ -131,7 +133,6 @@ const ParticleBackground = () => {
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
-    // Mouse tracking
     let mouse = { x: null, y: null, radius: 150 };
 
     window.addEventListener('mousemove', (event) => {
@@ -144,55 +145,27 @@ const ParticleBackground = () => {
       mouse.y = null;
     });
 
-    // Create particles
     class Particle {
       constructor() {
         this.x = Math.random() * canvas.width;
         this.y = Math.random() * canvas.height;
         this.size = Math.random() * 2 + 1;
-        this.baseX = this.x;
-        this.baseY = this.y;
-        this.density = (Math.random() * 30) + 1;
         this.vx = (Math.random() - 0.5) * 0.5;
         this.vy = (Math.random() - 0.5) * 0.5;
       }
 
       draw() {
-        ctx.fillStyle = 'rgba(148, 163, 184, 0.5)'; // Slate-400 with opacity
+        ctx.fillStyle = 'rgba(148, 163, 184, 0.5)';
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.closePath();
         ctx.fill();
       }
 
       update() {
         this.x += this.vx;
         this.y += this.vy;
-
-        // Bounce off edges
         if (this.x < 0 || this.x > canvas.width) this.vx = -this.vx;
         if (this.y < 0 || this.y > canvas.height) this.vy = -this.vy;
-
-        // Mouse interaction
-        if (mouse.x != null) {
-            let dx = mouse.x - this.x;
-            let dy = mouse.y - this.y;
-            let distance = Math.sqrt(dx * dx + dy * dy);
-            
-            if (distance < mouse.radius) {
-                const forceDirectionX = dx / distance;
-                const forceDirectionY = dy / distance;
-                const maxDistance = mouse.radius;
-                const force = (maxDistance - distance) / maxDistance;
-                const directionX = forceDirectionX * force * this.density * 0.6;
-                const directionY = forceDirectionY * force * this.density * 0.6;
-                
-                // Gentle push away
-                // this.x -= directionX;
-                // this.y -= directionY;
-            }
-        }
-
         this.draw();
       }
     }
@@ -252,7 +225,6 @@ const ParticleBackground = () => {
   );
 };
 
-
 // --- COMPONENTS ---
 
 const Header = ({ currentView, setView, isAdmin, handleLogout }) => {
@@ -262,42 +234,44 @@ const Header = ({ currentView, setView, isAdmin, handleLogout }) => {
     <header className="fixed w-full top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 shadow-sm transition-all duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
-          {/* Logo Section */}
+          
           <div 
-            className="flex items-center space-x-3 cursor-pointer group" 
-            onClick={() => !isAdmin && setView('landing')} // Disable click if admin? Or let it stay
+            className="flex items-center gap-4 cursor-pointer group" 
+            onClick={() => !isAdmin && setView('landing')}
           >
-            <div className="flex space-x-2 items-center">
+            <div className="relative w-12 h-10 flex items-center justify-center">
+               <img 
+                src="/Logo_HIMAKOM.png" 
+                alt="HIMAKOM" 
+                className="absolute w-10 h-10 object-contain drop-shadow-md bg-white rounded-full z-10 transition-transform duration-300 ease-in-out group-hover:translate-x-6 opacity-0 group-hover:opacity-100 lg:opacity-100"
+                onError={(e) => { e.target.onerror = null; e.target.src="https://placehold.co/40x40/0284c7/FFF?text=H"; }}
+              />
               <img 
                 src="/Logo_MPA.png" 
                 alt="MPA" 
-                className="w-10 h-10 object-contain drop-shadow-md bg-white rounded-full"
-                onError={(e) => { e.target.onerror = null; e.target.src="https://placehold.co/40x40/1e3a8a/FFF?text=MPA"; }} 
-              />
-              {/* Hide other logos on mobile to save space, show on larger screens */}
-              <img 
-                src="/Logo_HIMAKOM.png" 
-                alt="HIMAKOM" 
-                className="hidden lg:block w-10 h-10 object-contain drop-shadow-md bg-white rounded-full opacity-90 group-hover:opacity-100 transition-all"
-                onError={(e) => { e.target.onerror = null; e.target.src="https://placehold.co/40x40/0284c7/FFF?text=HIMA"; }}
-              />
-              <img 
-                src="/logo-polban.png" 
-                alt="POLBAN" 
-                className="hidden lg:block w-10 h-10 object-contain drop-shadow-md bg-white rounded-full opacity-90 group-hover:opacity-100 transition-all"
-                onError={(e) => { e.target.onerror = null; e.target.src="https://placehold.co/40x40/f97316/FFF?text=POL"; }}
+                className="absolute w-10 h-10 object-contain drop-shadow-md bg-white rounded-full z-20 transition-transform duration-300 ease-in-out group-hover:-translate-x-2"
+                onError={(e) => { e.target.onerror = null; e.target.src="https://placehold.co/40x40/1e3a8a/FFF?text=M"; }} 
               />
             </div>
-            <div className="flex flex-col">
-              <span className="font-bold text-slate-800 text-lg leading-tight">SUARA MPA</span>
-              <span className="text-xs text-slate-500 font-medium tracking-wider">HIMAKOM POLBAN</span>
+
+            <div className="flex items-center gap-3">
+              <div className="flex flex-col">
+                <span className="font-bold text-slate-800 text-lg leading-tight flex items-center gap-2">
+                  SUARA MPA HIMAKOM
+                   <img 
+                    src="/logo-polban.png" 
+                    alt="POLBAN" 
+                    className="w-6 h-6 object-contain drop-shadow-sm"
+                    onError={(e) => { e.target.onerror = null; e.target.src="https://placehold.co/24x24/f97316/FFF?text=P"; }}
+                  />
+                </span>
+                <span className="text-xs text-slate-500 font-medium tracking-wider">Politeknik Negeri Bandung</span>
+              </div>
             </div>
           </div>
 
-          {/* Desktop Nav - CONDITIONAL RENDERING */}
           <nav className="hidden md:flex items-center space-x-6">
             {isAdmin ? (
-                // --- ADMIN VIEW ---
                 <div className="flex items-center gap-4 animate-fade-in">
                     <div className="flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-full border border-blue-100">
                         <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
@@ -312,7 +286,6 @@ const Header = ({ currentView, setView, isAdmin, handleLogout }) => {
                     </button>
                 </div>
             ) : (
-                // --- PUBLIC VIEW ---
                 <>
                     <button onClick={() => setView('landing')} className={`text-sm font-medium transition-colors ${currentView === 'landing' ? 'text-blue-700' : 'text-slate-600 hover:text-blue-700'}`}>Beranda</button>
                     <button onClick={() => setView('form')} className={`text-sm font-medium transition-colors ${currentView === 'form' ? 'text-blue-700' : 'text-slate-600 hover:text-blue-700'}`}>Kirim Aspirasi</button>
@@ -324,7 +297,6 @@ const Header = ({ currentView, setView, isAdmin, handleLogout }) => {
             )}
           </nav>
 
-          {/* Mobile Menu Button */}
           <div className="md:hidden">
             <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-slate-600 p-2 hover:bg-slate-100 rounded-lg transition-colors">
               {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -333,12 +305,10 @@ const Header = ({ currentView, setView, isAdmin, handleLogout }) => {
         </div>
       </div>
 
-      {/* Mobile Nav Dropdown */}
       {isMenuOpen && (
         <div className="md:hidden bg-white/95 backdrop-blur-md border-t border-slate-100 shadow-xl absolute w-full animate-slide-down">
           <div className="px-4 pt-2 pb-6 space-y-2 flex flex-col">
             {isAdmin ? (
-                 // --- ADMIN MOBILE MENU ---
                  <>
                     <div className="p-3 bg-blue-50 rounded-lg mb-2 flex items-center gap-2">
                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
@@ -352,7 +322,6 @@ const Header = ({ currentView, setView, isAdmin, handleLogout }) => {
                     </button>
                  </>
             ) : (
-                // --- PUBLIC MOBILE MENU ---
                 <>
                     <button onClick={() => { setView('landing'); setIsMenuOpen(false); }} className="p-3 text-left font-medium text-slate-700 hover:bg-blue-50 rounded-lg flex items-center gap-3">
                         <LayoutDashboard size={18} className="opacity-50"/> Beranda
@@ -376,9 +345,79 @@ const Header = ({ currentView, setView, isAdmin, handleLogout }) => {
   );
 };
 
-const Hero = ({ setView }) => (
-  <div className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden min-h-[90vh] flex flex-col justify-center">
-    {/* Background Gradients */}
+// --- NEW COMPONENT: Public Table ---
+const PublicAspirationsTable = ({ db, appId, user }) => {
+  const [data, setData] = useState([]);
+
+  useEffect(() => {
+    // Guard: Don't run query if DB not init OR user not authenticated yet
+    if (!db || !user) return;
+
+    const q = query(
+      collection(db, 'artifacts', appId, 'public', 'data', 'aspirations'),
+      orderBy('created_at', 'desc')
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const docs = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
+      setData(docs);
+    }, (error) => {
+      console.log("Waiting for permissions...", error.code);
+    });
+    return () => unsubscribe();
+  }, [db, appId, user]);
+
+  return (
+    <div className="mt-20 max-w-7xl mx-auto px-4 pb-20">
+      <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="p-6 border-b border-slate-200 bg-slate-50/50 flex justify-between items-center">
+          <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+            <Inbox size={20} className="text-blue-600"/> Daftar Aspirasi Masuk
+          </h3>
+          <span className="text-sm text-slate-500">{data.length} Aspirasi</span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm text-slate-600">
+            <thead className="bg-slate-50 text-slate-700 font-bold uppercase text-xs tracking-wider">
+              <tr>
+                <th className="px-6 py-4">Tanggal</th>
+                <th className="px-6 py-4">Kategori</th>
+                <th className="px-6 py-4">Judul</th>
+                <th className="px-6 py-4">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {data.map((item) => (
+                <tr key={item.id} className="hover:bg-blue-50/30 transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap">{formatDate(item.created_at)}</td>
+                  <td className="px-6 py-4">
+                    <span className="bg-slate-100 px-2 py-1 rounded text-xs font-medium">{item.category}</span>
+                  </td>
+                  <td className="px-6 py-4 font-medium text-slate-800 max-w-xs truncate">{item.title}</td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${getStatusColor(item.status)}`}>
+                      {getStatusLabel(item.status)}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+              {data.length === 0 && (
+                 <tr>
+                    <td colSpan="4" className="px-6 py-12 text-center text-slate-400">
+                        {user ? "Belum ada data aspirasi publik." : "Memuat data..."}
+                    </td>
+                 </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const Hero = ({ setView, user, db, appId }) => (
+  <>
+  <div className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden flex flex-col justify-center">
     <div className="absolute top-0 right-0 w-1/2 h-full bg-blue-600/5 skew-x-12 blur-3xl -z-10" />
     <div className="absolute bottom-0 left-0 w-1/3 h-2/3 bg-sky-400/5 -skew-x-12 blur-3xl -z-10" />
     
@@ -414,7 +453,6 @@ const Hero = ({ setView }) => (
         </button>
       </div>
 
-      {/* Stats Mockup - Responsive Grid */}
       <div className="mt-20 grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-8 max-w-4xl mx-auto">
         <div className="bg-white/60 backdrop-blur-md p-6 rounded-2xl shadow-sm border border-white/50 hover:bg-white transition-all">
           <div className="text-3xl md:text-4xl font-bold text-blue-700 mb-2">100%</div>
@@ -431,6 +469,10 @@ const Hero = ({ setView }) => (
       </div>
     </div>
   </div>
+
+  {/* Public Table Component inside Landing View */}
+  <PublicAspirationsTable db={db} appId={appId} user={user} />
+  </>
 );
 
 const AspirationForm = ({ onSubmit }) => {
@@ -455,7 +497,6 @@ const AspirationForm = ({ onSubmit }) => {
     <div className="pt-28 pb-20 max-w-3xl mx-auto px-4">
       <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/50 overflow-hidden animate-fade-in-up">
         <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-blue-600 p-8 text-white relative overflow-hidden">
-          {/* Decorative circles */}
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10 blur-2xl"></div>
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-5 -mb-5 blur-xl"></div>
           
@@ -466,7 +507,6 @@ const AspirationForm = ({ onSubmit }) => {
         </div>
         
         <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6">
-          {/* Category */}
           <div className="space-y-2">
             <label className="text-sm font-bold text-slate-700 ml-1">Kategori Aspirasi</label>
             <div className="relative">
@@ -487,7 +527,6 @@ const AspirationForm = ({ onSubmit }) => {
             </div>
           </div>
 
-          {/* Title */}
           <div className="space-y-2">
             <label className="text-sm font-bold text-slate-700 ml-1">Judul Aspirasi</label>
             <input 
@@ -500,7 +539,6 @@ const AspirationForm = ({ onSubmit }) => {
             />
           </div>
 
-          {/* Message */}
           <div className="space-y-2">
             <label className="text-sm font-bold text-slate-700 ml-1">Isi Aspirasi</label>
             <textarea 
@@ -513,7 +551,6 @@ const AspirationForm = ({ onSubmit }) => {
             />
           </div>
 
-          {/* Identity Toggle */}
           <div 
             className={`flex items-center space-x-4 p-5 rounded-2xl border transition-all cursor-pointer ${formData.isAnonymous ? 'bg-blue-50 border-blue-200' : 'bg-slate-50 border-slate-200'}`}
             onClick={() => setFormData({...formData, isAnonymous: !formData.isAnonymous})}
@@ -531,7 +568,6 @@ const AspirationForm = ({ onSubmit }) => {
             </div>
           </div>
 
-          {/* Optional Identity Fields */}
           {!formData.isAnonymous && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in p-4 bg-slate-50 rounded-xl border border-slate-200 border-dashed">
               <div>
@@ -592,7 +628,7 @@ const SuccessModal = ({ trackingCode, onClose }) => (
   </div>
 );
 
-const TrackingView = ({ db, appId }) => {
+const TrackingView = ({ db, appId, user }) => {
   const [code, setCode] = useState('');
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
@@ -600,14 +636,16 @@ const TrackingView = ({ db, appId }) => {
   const [allAspirations, setAllAspirations] = useState([]);
 
   useEffect(() => {
-     if (!db) return;
+     if (!db || !user) return; // Guard: Wait for auth and db
      const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'aspirations'));
      const unsubscribe = onSnapshot(q, (snapshot) => {
        const docs = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
        setAllAspirations(docs);
+     }, (error) => {
+        console.log("Waiting for tracking permissions...", error.code);
      });
      return () => unsubscribe();
-  }, [db, appId]);
+  }, [db, appId, user]);
 
   const handleTrack = (e) => {
     e.preventDefault();
@@ -783,15 +821,14 @@ const AdminLogin = ({ auth, onLoginSuccess }) => {
   );
 };
 
-const AdminDashboard = ({ db, appId }) => {
+const AdminDashboard = ({ db, appId, user }) => {
   const [aspirations, setAspirations] = useState([]);
   const [filter, setFilter] = useState('all');
   const [selectedItem, setSelectedItem] = useState(null);
   const [replyText, setReplyText] = useState('');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // For responsive layout
-
+  
   useEffect(() => {
-    if (!db) return;
+    if (!db || !user) return; // Guard
     const q = query(
       collection(db, 'artifacts', appId, 'public', 'data', 'aspirations'),
       orderBy('created_at', 'desc')
@@ -801,7 +838,7 @@ const AdminDashboard = ({ db, appId }) => {
       setAspirations(docs);
     });
     return () => unsubscribe();
-  }, [db, appId]);
+  }, [db, appId, user]);
 
   const filteredItems = filter === 'all' 
     ? aspirations 
@@ -822,17 +859,27 @@ const AdminDashboard = ({ db, appId }) => {
       admin_reply: replyText,
       status: 'followed_up'
     });
-    // Update local state immediately for better UX
     setSelectedItem(prev => ({...prev, admin_reply: replyText, status: 'followed_up'}));
     setReplyText('');
     alert("Tanggapan berhasil dikirim!");
   };
 
-  // Close sidebar on selection if on mobile
+  // --- DELETE FUNCTION ---
+  const handleDelete = async (id) => {
+    if(window.confirm("Apakah Anda yakin ingin menghapus aspirasi ini secara permanen?")) {
+        try {
+            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'aspirations', id));
+            setSelectedItem(null); // Clear selection if the deleted item was selected
+        } catch (error) {
+            console.error("Error deleting:", error);
+            alert("Gagal menghapus data.");
+        }
+    }
+  }
+
   const handleSelect = (item) => {
     setSelectedItem(item);
     setReplyText(item.admin_reply || '');
-    // Scroll to top of detail view on mobile
     if (window.innerWidth < 1024) {
          window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -908,12 +955,23 @@ const AdminDashboard = ({ db, appId }) => {
                 {/* Detail Header */}
                 <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start gap-4 bg-slate-50/30">
                   <div className="flex-1">
-                    <button 
-                        onClick={() => setSelectedItem(null)} 
-                        className="lg:hidden mb-4 text-xs font-bold text-slate-500 flex items-center gap-1 hover:text-blue-600"
-                    >
-                        <ChevronRight className="rotate-180" size={14}/> Kembali ke Daftar
-                    </button>
+                    <div className="flex justify-between items-start">
+                        <button 
+                            onClick={() => setSelectedItem(null)} 
+                            className="lg:hidden mb-4 text-xs font-bold text-slate-500 flex items-center gap-1 hover:text-blue-600"
+                        >
+                            <ChevronRight className="rotate-180" size={14}/> Kembali
+                        </button>
+                        {/* DELETE BUTTON */}
+                        <button 
+                            onClick={() => handleDelete(selectedItem.id)}
+                            className="text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors"
+                            title="Hapus Aspirasi"
+                        >
+                            <Trash2 size={18} />
+                        </button>
+                    </div>
+
                     <h2 className="text-xl md:text-2xl font-bold text-slate-900 leading-tight">{selectedItem.title}</h2>
                     <div className="flex flex-wrap items-center gap-3 mt-3 text-sm text-slate-500">
                       <span className="flex items-center gap-1 bg-slate-100 px-2 py-1 rounded"><User size={14}/> {selectedItem.isAnonymous ? 'Anonim' : selectedItem.name}</span>
@@ -1012,7 +1070,6 @@ export default function App() {
       const adminStatus = currentUser && currentUser.email ? true : false;
       setIsAdmin(adminStatus);
       
-      // Auto-switch view if logged in as admin
       if (adminStatus) {
         setView('admin');
       }
@@ -1049,14 +1106,15 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen font-sans text-slate-900 selection:bg-blue-200 selection:text-blue-900 overflow-x-hidden">
-      {/* Global Background Animation - Only visible on public pages */}
+    // FOOTER FIX: Added flex flex-col and min-h-screen to wrapper
+    <div className="min-h-screen flex flex-col font-sans text-slate-900 selection:bg-blue-200 selection:text-blue-900 overflow-x-hidden">
       {!isAdmin && <ParticleBackground />}
 
       <Header currentView={view} setView={setView} isAdmin={isAdmin} handleLogout={handleLogout} />
       
-      <main className="relative z-10">
-        {view === 'landing' && <Hero setView={setView} />}
+      {/* Main content takes available space (flex-grow) */}
+      <main className="relative z-10 flex-grow">
+        {view === 'landing' && <Hero setView={setView} user={user} db={db} appId={appId} />}
         
         {view === 'form' && (
           lastTrackingCode ? (
@@ -1069,19 +1127,19 @@ export default function App() {
           )
         )}
         
-        {view === 'tracking' && <TrackingView db={db} appId={appId} />}
+        {view === 'tracking' && <TrackingView db={db} appId={appId} user={user} />}
         
         {view === 'login' && (
           <AdminLogin auth={auth} onLoginSuccess={() => setView('admin')} />
         )}
         
         {view === 'admin' && (
-           isAdmin ? <AdminDashboard db={db} appId={appId} /> : <div className="pt-32 text-center text-red-500 font-bold">Access Denied. Please login.</div>
+           isAdmin ? <AdminDashboard db={db} appId={appId} user={user} /> : <div className="pt-32 text-center text-red-500 font-bold">Access Denied. Please login.</div>
         )}
       </main>
 
       {!isAdmin && (
-        <footer className="bg-slate-900 text-slate-400 py-12 border-t border-slate-800 relative z-10">
+        <footer className="bg-slate-900 text-slate-400 py-12 border-t border-slate-800 relative z-10 mt-auto">
             <div className="max-w-7xl mx-auto px-4 text-center">
             <div className="flex items-center justify-center gap-2 mb-4 text-white font-bold text-xl">
                 <Scale size={24} className="text-blue-500" /> MPA HIMAKOM
