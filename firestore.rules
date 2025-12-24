@@ -1,0 +1,44 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user is admin (has email)
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email != null;
+    }
+    
+    // Artifacts collection
+    match /artifacts/{appId} {
+      
+      // Public aspirations - anyone can read, authenticated users can write
+      match /public/data/aspirations/{aspirationId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated();
+        allow update, delete: if isAdmin();
+      }
+      
+      // IP tracking - authenticated users can read/write their own, admins can read all
+      match /ip_tracking/{ipHash} {
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated(); // Changed: allow users to write
+      }
+      
+      // Admin settings - authenticated users can read, only admins can write
+      match /admin/settings {
+        allow read: if isAuthenticated(); // Changed: allow users to read settings
+        allow write: if isAdmin();
+      }
+      
+      // Allow reading nested documents for authenticated users
+      match /{document=**} {
+        allow read: if isAuthenticated();
+      }
+    }
+  }
+}

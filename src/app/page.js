@@ -25,7 +25,9 @@ import {
   Phone,
   MessageCircle,
   Copy,
-  Check
+  Check,
+  Settings,
+  Mail
 } from 'lucide-react';
 
 // --- FIREBASE IMPORTS ---
@@ -48,7 +50,9 @@ import {
   updateDoc,
   deleteDoc,
   serverTimestamp,
-  orderBy
+  orderBy,
+  getDoc,
+  setDoc
 } from 'firebase/firestore';
 
 // --- FIREBASE CONFIGURATION & INIT ---
@@ -492,11 +496,111 @@ const AspirationForm = ({ onSubmit }) => {
     category: 'Akademik',
     title: '',
     message: '',
-    name: '',
-    generation: '',
-    isAnonymous: true
+    image: null // base64 image string
   });
   const [loading, setLoading] = useState(false);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [quotaInfo, setQuotaInfo] = useState(null);
+
+  // Get quota info on component mount
+  useEffect(() => {
+    const fetchQuotaInfo = async () => {
+      try {
+        // Get IP
+        const ipResponse = await fetch('/api/get-ip');
+        const ipData = await ipResponse.json();
+        const userIP = ipData.ip || 'unknown';
+
+        const hashIP = (ip) => {
+          let hash = 0;
+          for (let i = 0; i < ip.length; i++) {
+            const char = ip.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash;
+          }
+          return Math.abs(hash).toString(16);
+        };
+
+        const ipHash = hashIP(userIP);
+
+        // Get settings
+        const settingsRef = doc(db, 'artifacts', appId, 'admin', 'settings');
+        const settingsSnap = await getDoc(settingsRef);
+        const settings = settingsSnap.exists() 
+          ? settingsSnap.data()
+          : { cooldown_days: 7, cooldown_enabled: true, max_aspirations_per_period: 1 };
+
+        // Get IP tracking
+        const ipTrackingRef = doc(db, 'artifacts', appId, 'ip_tracking', ipHash);
+        const ipTrackingSnap = await getDoc(ipTrackingRef);
+        
+        let remainingQuota = settings.max_aspirations_per_period || 1;
+        let nextResetDate = null;
+
+        if (ipTrackingSnap.exists() && settings.cooldown_enabled) {
+          const ipData = ipTrackingSnap.data();
+          const lastSubmission = ipData.last_submission_at?.toDate();
+          
+          if (lastSubmission) {
+            const cooldownMs = settings.cooldown_days * 24 * 60 * 60 * 1000;
+            const timeSinceLastSubmission = Date.now() - lastSubmission.getTime();
+            
+            if (timeSinceLastSubmission < cooldownMs) {
+              const submissionCount = ipData.submission_count_in_period || 0;
+              remainingQuota = Math.max(0, settings.max_aspirations_per_period - submissionCount);
+              nextResetDate = new Date(lastSubmission.getTime() + cooldownMs);
+            }
+          }
+        }
+
+        setQuotaInfo({
+          ip: userIP,
+          remainingQuota,
+          maxQuota: settings.max_aspirations_per_period,
+          nextResetDate,
+          cooldownEnabled: settings.cooldown_enabled,
+          cooldownDays: settings.cooldown_days
+        });
+      } catch (error) {
+        console.error('Error fetching quota info:', error);
+      }
+    };
+
+    fetchQuotaInfo();
+  }, []);
+
+  const handleImageChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Ukuran gambar terlalu besar. Maksimal 2MB.');
+      e.target.value = '';
+      return;
+    }
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('File harus berupa gambar.');
+      e.target.value = '';
+      return;
+    }
+
+    // Convert to base64
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result;
+      setFormData({ ...formData, image: base64String });
+      setImagePreview(base64String);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeImage = () => {
+    setFormData({ ...formData, image: null });
+    setImagePreview(null);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -563,47 +667,74 @@ const AspirationForm = ({ onSubmit }) => {
             />
           </div>
 
-          <div
-            className={`flex items-center space-x-4 p-5 rounded-2xl border transition-all cursor-pointer ${formData.isAnonymous ? 'bg-blue-50 border-blue-200' : 'bg-slate-50 border-slate-200'}`}
-            onClick={() => setFormData({ ...formData, isAnonymous: !formData.isAnonymous })}
-          >
-            <div className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors duration-300 ${formData.isAnonymous ? 'bg-blue-600' : 'bg-slate-300'}`}>
-              <div className={`bg-white w-6 h-6 rounded-full shadow-md transform duration-300 ${formData.isAnonymous ? 'translate-x-6' : ''}`} />
-            </div>
-            <div className="flex flex-col">
-              <span className="font-bold text-slate-800">
-                {formData.isAnonymous ? 'Mode Anonim Aktif' : 'Mode Publik Aktif'}
-              </span>
-              <span className="text-xs text-slate-500">
-                {formData.isAnonymous ? 'Identitas Anda akan disembunyikan sepenuhnya.' : 'Nama Anda akan terlihat oleh admin.'}
-              </span>
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-slate-700 ml-1">Lampiran Foto (Opsional)</label>
+            <div className="space-y-3">
+              {!imagePreview ? (
+                <label className="w-full p-6 bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl hover:border-blue-500 hover:bg-blue-50/30 transition-all cursor-pointer flex flex-col items-center gap-3 group">
+                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 group-hover:bg-blue-200 transition-colors">
+                    <FileText size={32} />
+                  </div>
+                  <div className="text-center">
+                    <p className="font-bold text-slate-700 group-hover:text-blue-700">Klik untuk upload foto</p>
+                    <p className="text-xs text-slate-500 mt-1">PNG, JPG, atau JPEG (max 2MB)</p>
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
+                </label>
+              ) : (
+                <div className="relative group">
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="w-full rounded-xl border-2 border-slate-200 shadow-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={removeImage}
+                    className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors shadow-lg"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
-          {!formData.isAnonymous && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in p-4 bg-slate-50 rounded-xl border border-slate-200 border-dashed">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Nama Lengkap</label>
-                <input
-                  type="text"
-                  placeholder="Nama Anda"
-                  className="w-full p-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                />
+          {/* User Quota Info */}
+          {quotaInfo && (
+            <div className="bg-gradient-to-r from-slate-50 to-slate-100 p-4 rounded-xl border border-slate-200">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-white p-3 rounded-lg border border-slate-200">
+                  <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">IP Address</p>
+                  <p className="text-xs font-mono text-slate-700">{quotaInfo.ip}</p>
+                </div>
+                <div className="bg-white p-3 rounded-lg border border-slate-200">
+                  <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">Quota Tersisa</p>
+                  <p className="text-lg font-bold text-blue-700">
+                    {quotaInfo.cooldownEnabled ? `${quotaInfo.remainingQuota}/${quotaInfo.maxQuota}` : '∞'}
+                  </p>
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Angkatan</label>
-                <input
-                  type="text"
-                  placeholder="20xx"
-                  className="w-full p-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  value={formData.generation}
-                  onChange={(e) => setFormData({ ...formData, generation: e.target.value })}
-                />
-              </div>
+              {quotaInfo.cooldownEnabled && quotaInfo.nextResetDate && (
+                <div className="mt-2 text-[10px] text-slate-500 text-center">
+                  Reset: {quotaInfo.nextResetDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </div>
+              )}
             </div>
           )}
+
+          <div className="bg-blue-50 p-4 rounded-xl border border-blue-200 flex items-start gap-3">
+            <ShieldCheck size={20} className="text-blue-600 mt-0.5 shrink-0" />
+            <div className="text-sm text-blue-900">
+              <p className="font-bold mb-1">Semua Aspirasi Anonim</p>
+              <p className="text-blue-700 text-xs">Identitas Anda sepenuhnya dilindungi. Tidak ada nama yang akan ditampilkan.</p>
+            </div>
+          </div>
 
           <button
             type="submit"
@@ -618,77 +749,150 @@ const AspirationForm = ({ onSubmit }) => {
   );
 };
 
+// SUCCESS MODAL COMPONENT
 const SuccessModal = ({ trackingCode, onClose }) => {
+  const [email, setEmail] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = () => {
+  const handleSendEmail = async () => {
+    if (!email) {
+      alert('Masukkan email Anda terlebih dahulu');
+      return;
+    }
+
+    // Validate email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      alert('Email tidak valid');
+      return;
+    }
+
+    setSending(true);
+    try {
+      const response = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, trackingCode })
+      });
+
+      if (response.ok) {
+        setSent(true);
+        setTimeout(() => setSent(false), 3000);
+      } else {
+        alert('Gagal mengirim email. Coba lagi.');
+      }
+    } catch (error) {
+      console.error('Error sending email:', error);
+      alert('Gagal mengirim email. Coba lagi.');
+    }
+    setSending(false);
+  };
+
+  const handleCopyCode = () => {
     navigator.clipboard.writeText(trackingCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleWhatsAppRedirect = () => {
-    const phoneNumber = "6283870405395";
-    const text = `Halo Admin MPA, saya ingin menyimpan kode tracking aspirasi saya: ${trackingCode}`;
-    const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(text)}`;
-    window.open(url, '_blank');
+  const handleWhatsApp = () => {
+    const message = `Kode tracking aspirasi MPA saya: ${trackingCode}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[70vh] p-4 animate-fade-in w-full">
-      <div className="bg-white rounded-[2rem] max-w-lg w-full p-8 md:p-10 text-center shadow-2xl border border-blue-50 relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 to-green-400"></div>
-
-        <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 text-green-600 shadow-sm ring-4 ring-green-50">
-          <CheckCircle size={40} strokeWidth={3} />
-        </div>
-
-        <h3 className="text-3xl font-bold text-slate-900 mb-3">Aspirasi Terkirim!</h3>
-        <p className="text-slate-600 mb-8 leading-relaxed">
-          Terima kasih telah bersuara. Mohon simpan kode di bawah ini untuk melacak status aspirasi Anda.
-        </p>
-
-        <div
-          className="bg-slate-50 p-6 rounded-2xl mb-8 border-2 border-slate-200 border-dashed relative group cursor-pointer transition-all hover:border-blue-400 hover:bg-blue-50/30"
-          onClick={handleCopy}
+    <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-md flex items-center justify-center p-4 z-[9999] animate-fade-in">
+      <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full animate-scale-in relative flex flex-col max-h-[90vh]">
+        {/* Close Button X */}
+        <button 
+          onClick={onClose}
+          className="absolute top-4 right-4 z-20 p-2 bg-black/5 hover:bg-black/10 rounded-full transition-colors text-slate-600"
+          aria-label="Tutup"
         >
-          <div className="absolute top-3 right-3">
-            {copied ? (
-              <span className="text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded-md flex items-center gap-1 animate-fade-in">
-                <Check size={12} /> Tersalin
-              </span>
-            ) : (
-              <span className="text-xs font-bold text-slate-400 bg-white border border-slate-200 px-2 py-1 rounded-md flex items-center gap-1 group-hover:text-blue-500 group-hover:border-blue-200 transition-colors">
-                <Copy size={12} /> <span className="hidden sm:inline">Klik Salin</span>
-              </span>
-            )}
+          <X size={20} />
+        </button>
+
+        {/* Header Section */}
+        <div className="bg-gradient-to-br from-green-500 to-emerald-600 p-6 sm:p-8 text-white text-center shrink-0">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-white/20 rounded-full mb-4 ring-4 ring-white/10 shrink-0">
+            <CheckCircle size={40} className="text-white" />
           </div>
-          <p className="text-xs text-slate-500 uppercase tracking-widest font-bold mb-2">Kode Tracking Anda</p>
-          <div className="text-4xl sm:text-5xl font-mono font-black text-blue-800 tracking-wider break-all drop-shadow-sm">
-            {trackingCode}
-          </div>
+          <h2 className="text-2xl font-black tracking-tight leading-tight mb-2">Aspirasi Terkirim!</h2>
+          <p className="text-green-50 text-sm font-medium opacity-90">Terima kasih telah menyuarakan pendapat Anda</p>
         </div>
 
-        <div className="space-y-4">
-          <button
-            onClick={handleWhatsAppRedirect}
-            className="w-full py-4 bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold rounded-xl transition-all shadow-lg shadow-green-900/20 flex items-center justify-center gap-3 group transform hover:-translate-y-0.5"
-          >
-            <MessageCircle size={24} className="group-hover:scale-110 transition-transform" />
-            <span>Simpan Kode ke WhatsApp</span>
-          </button>
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-8 custom-scrollbar">
+          {/* Tracking Code Area */}
+          <div className="text-center space-y-3">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Kode Tracking Anda</span>
+            <div className="bg-slate-50 border-2 border-dashed border-blue-200 rounded-2xl p-6 transition-all group hover:border-blue-500">
+              <span className="text-3xl sm:text-4xl font-black text-blue-900 tracking-widest font-mono break-all leading-none">{trackingCode}</span>
+            </div>
+            <button
+              onClick={handleCopyCode}
+              className="w-full py-3 bg-white border border-slate-200 hover:border-blue-500 hover:text-blue-700 rounded-xl text-sm font-bold text-slate-600 transition-all flex items-center justify-center gap-2 shadow-sm active:scale-95"
+            >
+              {copied ? <><Check size={18} className="text-green-500" /> Tersalin!</> : <><Copy size={18} /> Salin Kode</>}
+            </button>
+          </div>
 
-          <button
-            onClick={onClose}
-            className="w-full py-4 bg-white text-slate-600 border border-slate-200 font-bold rounded-xl hover:bg-slate-50 hover:text-slate-900 transition-colors flex items-center justify-center gap-2"
-          >
-            Kembali ke Beranda
-          </button>
+          <hr className="border-slate-100" />
+
+          {/* Email Form */}
+          <div className="space-y-4">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Dapatkan Bukti di Email</span>
+            <div className="flex flex-col gap-2">
+              <input
+                type="email"
+                placeholder="email@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm font-medium transition-all"
+              />
+              <button
+                onClick={handleSendEmail}
+                disabled={sending || sent}
+                className={`w-full py-4 rounded-xl font-black text-white text-sm transition-all flex items-center justify-center gap-2 shadow-lg ${
+                  sent ? 'bg-green-600' : 'bg-blue-600 hover:bg-blue-700'
+                } disabled:opacity-70 active:scale-95`}
+              >
+                {sent ? <><Check size={18} /> Berhasil Terkirim</> : sending ? 'Sedang Mengirim...' : <><Mail size={18} /> Kirim ke Email</>}
+              </button>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="pt-2 space-y-3">
+            <button
+              onClick={handleWhatsApp}
+              className="w-full py-4 bg-[#25D366] hover:bg-[#22c35e] text-white font-black rounded-2xl transition-all flex items-center justify-center gap-3 shadow-lg shadow-green-900/10 active:scale-95"
+            >
+              <MessageCircle size={22} />
+              Bagikan ke WhatsApp
+            </button>
+            <button
+              onClick={onClose}
+              className="w-full py-4 bg-slate-900 hover:bg-black text-white font-black rounded-2xl transition-all shadow-xl active:scale-95"
+            >
+              Selesai
+            </button>
+          </div>
+
+          {/* Warning/Info Box */}
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex gap-3 text-amber-900">
+            <AlertCircle size={20} className="shrink-0 mt-0.5 opacity-60" />
+            <p className="text-[11px] leading-relaxed font-medium">
+              <span className="font-black">Penting:</span> Simpan kode ini baik-baik. Tanpa kode ini, Anda tidak dapat melacak status aspirasi Anda.
+            </p>
+          </div>
         </div>
       </div>
     </div>
   );
 };
+
 
 const TrackingView = ({ db, appId, user }) => {
   const [code, setCode] = useState('');
@@ -778,6 +982,19 @@ const TrackingView = ({ db, appId, user }) => {
             </div>
 
             <div className="p-6 md:p-8">
+              {result.image && (
+                <div className="mb-8">
+                  <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wide mb-3">Lampiran Foto</h4>
+                  <img
+                    src={result.image}
+                    alt="Lampiran aspirasi"
+                    className="w-full rounded-xl border-2 border-slate-200 shadow-md hover:shadow-xl transition-shadow cursor-pointer"
+                    onClick={() => window.open(result.image, '_blank')}
+                  />
+                  <p className="text-xs text-slate-500 mt-2 text-center">Klik gambar untuk melihat ukuran penuh</p>
+                </div>
+              )}
+
               <div className="mb-8">
                 <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wide mb-3">Pesan Aspirasi</h4>
                 <p className="text-slate-700 text-base md:text-lg leading-relaxed whitespace-pre-line bg-slate-50 p-4 rounded-xl border border-slate-100">
@@ -883,11 +1100,207 @@ const AdminLogin = ({ auth, onLoginSuccess }) => {
   );
 };
 
+const AdminSettings = ({ db, appId, user }) => {
+  const [settings, setSettings] = useState({
+    cooldown_days: 7,
+    cooldown_enabled: true,
+    max_aspirations_per_period: 1,
+    allowed_categories: ['Akademik', 'Organisasi', 'Fasilitas', 'Kebijakan', 'Lainnya']
+  });
+  const [loading, setLoading] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const allCategories = ['Akademik', 'Organisasi', 'Fasilitas', 'Kebijakan', 'Lainnya'];
+
+  useEffect(() => {
+    if (!db || !user) return;
+    const settingsRef = doc(db, 'artifacts', appId, 'admin', 'settings');
+    const unsubscribe = onSnapshot(settingsRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        setSettings({
+          cooldown_days: data.cooldown_days || 7,
+          cooldown_enabled: data.cooldown_enabled !== undefined ? data.cooldown_enabled : true,
+          max_aspirations_per_period: data.max_aspirations_per_period || 1,
+          allowed_categories: data.allowed_categories || allCategories
+        });
+      }
+    });
+    return () => unsubscribe();
+  }, [db, appId, user]);
+
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      const settingsRef = doc(db, 'artifacts', appId, 'admin', 'settings');
+      await setDoc(settingsRef, {
+        ...settings,
+        updated_at: serverTimestamp(),
+        updated_by: user.email || user.uid
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      alert('Gagal menyimpan pengaturan');
+    }
+    setLoading(false);
+  };
+
+  const toggleCategory = (category) => {
+    const currentCategories = settings.allowed_categories || [];
+    if (currentCategories.includes(category)) {
+      // Remove category
+      setSettings({
+        ...settings,
+        allowed_categories: currentCategories.filter(c => c !== category)
+      });
+    } else {
+      // Add category
+      setSettings({
+        ...settings,
+        allowed_categories: [...currentCategories, category]
+      });
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 md:p-8">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="p-2 bg-blue-100 rounded-lg text-blue-700">
+          <Settings size={24} />
+        </div>
+        <h3 className="text-xl font-bold text-slate-800">Pengaturan Sistem</h3>
+      </div>
+
+      <div className="space-y-6">
+        {/* Cooldown Toggle */}
+        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
+          <div className="flex-1">
+            <label className="text-sm font-bold text-slate-700 mb-1 block">Status Cooldown</label>
+            <p className="text-xs text-slate-500">Aktifkan pembatasan waktu pengiriman aspirasi</p>
+          </div>
+          <div 
+            className={`w-14 h-8 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-300 ${settings.cooldown_enabled ? 'bg-blue-600' : 'bg-slate-300'}`}
+            onClick={() => setSettings({ ...settings, cooldown_enabled: !settings.cooldown_enabled })}
+          >
+            <div className={`bg-white w-6 h-6 rounded-full shadow-md transform duration-300 ${settings.cooldown_enabled ? 'translate-x-6' : ''}`} />
+          </div>
+        </div>
+
+        {settings.cooldown_enabled && (
+          <>
+            {/* Cooldown Days */}
+            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 animate-fade-in">
+              <label className="text-sm font-bold text-slate-700 mb-3 block">Durasi Cooldown (hari)</label>
+              <div className="flex items-center gap-4">
+                <input
+                  type="number"
+                  min="1"
+                  max="365"
+                  value={settings.cooldown_days}
+                  onChange={(e) => setSettings({ ...settings, cooldown_days: parseInt(e.target.value) || 1 })}
+                  className="w-24 p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-center font-bold text-lg"
+                />
+                <span className="text-sm text-slate-600">hari (1 minggu = 7 hari)</span>
+              </div>
+              <p className="text-xs text-slate-500 mt-2">
+                Setiap IP hanya bisa mengirim aspirasi setiap {settings.cooldown_days} hari
+              </p>
+            </div>
+
+            {/* Max Aspirations */}
+            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 animate-fade-in">
+              <label className="text-sm font-bold text-slate-700 mb-3 block">Maksimal Aspirasi per Periode</label>
+              <div className="flex items-center gap-4">
+                <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={settings.max_aspirations_per_period}
+                  onChange={(e) => setSettings({ ...settings, max_aspirations_per_period: parseInt(e.target.value) || 1 })}
+                  className="w-24 p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-center font-bold text-lg"
+                />
+                <span className="text-sm text-slate-600">aspirasi per {settings.cooldown_days} hari</span>
+              </div>
+              <p className="text-xs text-slate-500 mt-2">
+                Jumlah maksimal aspirasi yang bisa dikirim dalam satu periode cooldown
+              </p>
+            </div>
+
+            {/* Category Restrictions */}
+            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 animate-fade-in">
+              <label className="text-sm font-bold text-slate-700 mb-3 block">Kategori yang Diizinkan</label>
+              <div className="space-y-2">
+                {allCategories.map(category => {
+                  const isAllowed = (settings.allowed_categories || []).includes(category);
+                  return (
+                    <div
+                      key={category}
+                      onClick={() => toggleCategory(category)}
+                      className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                        isAllowed
+                          ? 'bg-blue-50 border-blue-500 text-blue-900'
+                          : 'bg-white border-slate-200 text-slate-500'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">{category}</span>
+                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                          isAllowed ? 'bg-blue-600 border-blue-600' : 'border-slate-300'
+                        }`}>
+                          {isAllowed && <Check size={14} className="text-white" />}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-slate-500 mt-3">
+                {settings.allowed_categories?.length === allCategories.length
+                  ? 'Semua kategori diizinkan'
+                  : `${settings.allowed_categories?.length || 0} dari ${allCategories.length} kategori diizinkan`}
+              </p>
+            </div>
+          </>
+        )}
+
+        <div className="pt-4 border-t border-slate-200">
+          <button
+            onClick={handleSave}
+            disabled={loading}
+            className={`w-full px-6 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${
+              saved 
+                ? 'bg-green-600 text-white' 
+                : 'bg-blue-800 text-white hover:bg-blue-900 shadow-lg shadow-blue-900/10'
+            } disabled:opacity-70`}
+          >
+            {saved ? (
+              <>
+                <Check size={20} />
+                Tersimpan!
+              </>
+            ) : loading ? (
+              'Menyimpan...'
+            ) : (
+              <>
+                <Send size={20} />
+                Simpan Pengaturan
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const AdminDashboard = ({ db, appId, user }) => {
   const [aspirations, setAspirations] = useState([]);
   const [filter, setFilter] = useState('all');
   const [selectedItem, setSelectedItem] = useState(null);
   const [replyText, setReplyText] = useState('');
+  const [activeTab, setActiveTab] = useState('aspirations'); // 'aspirations' or 'settings'
 
   useEffect(() => {
     if (!db || !user) return;
@@ -948,26 +1361,63 @@ const AdminDashboard = ({ db, appId, user }) => {
 
   return (
     <div className="pt-24 px-4 sm:px-6 lg:px-8 bg-slate-50 min-h-screen pb-10">
-      <div className="max-w-[1600px] mx-auto h-[calc(100vh-8rem)] flex flex-col">
+      <div className="max-w-[1600px] mx-auto flex flex-col">
 
-        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 shrink-0">
-          <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg text-blue-700"><LayoutDashboard size={24} /></div>
-            Dashboard Aspirasi
-            <span className="text-sm font-normal text-slate-500 bg-white px-3 py-1 rounded-full border border-slate-200 shadow-sm">{aspirations.length} Total</span>
-          </h2>
-          <div className="flex gap-2 overflow-x-auto w-full md:w-auto pb-1 no-scrollbar">
-            {['all', 'received', 'process', 'finished'].map(f => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all shadow-sm ${filter === f ? 'bg-blue-800 text-white ring-2 ring-blue-300 ring-offset-1' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
-              >
-                {f === 'all' ? 'Semua' : getStatusLabel(f)}
-              </button>
-            ))}
-          </div>
+        {/* Tab Navigation */}
+        <div className="flex items-center gap-4 mb-6">
+          <button
+            onClick={() => setActiveTab('aspirations')}
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${
+              activeTab === 'aspirations'
+                ? 'bg-blue-800 text-white shadow-lg'
+                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            <LayoutDashboard size={20} />
+            Aspirasi
+            <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">{aspirations.length}</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('settings')}
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${
+              activeTab === 'settings'
+                ? 'bg-blue-800 text-white shadow-lg'
+                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            <Settings size={20} />
+            Pengaturan
+          </button>
         </div>
+
+        {/* Settings View */}
+        {activeTab === 'settings' && (
+          <div className="max-w-3xl">
+            <AdminSettings db={db} appId={appId} user={user} />
+          </div>
+        )}
+
+        {/* Aspirations View */}
+        {activeTab === 'aspirations' && (
+          <div className="h-[calc(100vh-12rem)] flex flex-col">
+            <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 shrink-0">
+              <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg text-blue-700"><LayoutDashboard size={24} /></div>
+                Dashboard Aspirasi
+                <span className="text-sm font-normal text-slate-500 bg-white px-3 py-1 rounded-full border border-slate-200 shadow-sm">{aspirations.length} Total</span>
+              </h2>
+              <div className="flex gap-2 overflow-x-auto w-full md:w-auto pb-1 no-scrollbar">
+                {['all', 'received', 'process', 'finished'].map(f => (
+                  <button
+                    key={f}
+                    onClick={() => setFilter(f)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all shadow-sm ${filter === f ? 'bg-blue-800 text-white ring-2 ring-blue-300 ring-offset-1' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
+                  >
+                    {f === 'all' ? 'Semua' : getStatusLabel(f)}
+                  </button>
+                ))}
+              </div>
+            </div>
 
         <div className="flex-1 flex flex-col lg:flex-row gap-6 overflow-hidden h-full">
 
@@ -1057,6 +1507,19 @@ const AdminDashboard = ({ db, appId, user }) => {
                     <p className="text-slate-800 text-base md:text-lg whitespace-pre-line leading-relaxed">{selectedItem.message}</p>
                   </div>
 
+                  {selectedItem.image && (
+                    <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Lampiran Foto</h4>
+                      <img
+                        src={selectedItem.image}
+                        alt="Lampiran aspirasi"
+                        className="w-full rounded-xl border-2 border-slate-200 shadow-sm hover:shadow-lg transition-shadow cursor-pointer"
+                        onClick={() => window.open(selectedItem.image, '_blank')}
+                      />
+                      <p className="text-xs text-slate-500 mt-2 text-center">Klik gambar untuk melihat ukuran penuh</p>
+                    </div>
+                  )}
+
                   <div className="border-t border-slate-100 pt-6">
                     <h4 className="text-sm font-bold text-blue-900 flex items-center gap-2 mb-4">
                       <div className="p-1.5 bg-blue-100 rounded text-blue-700"><Megaphone size={16} /></div>
@@ -1092,7 +1555,11 @@ const AdminDashboard = ({ db, appId, user }) => {
             )}
           </div>
 
+          </div>
+
         </div>
+        )}
+
       </div>
     </div>
   );
@@ -1113,7 +1580,11 @@ export default function App() {
       if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
         await signInWithCustomToken(auth, __initial_auth_token);
       } else {
-        await signInAnonymously(auth);
+        const storedAdminEmail = localStorage.getItem('adminEmail');
+        if (!storedAdminEmail) {
+          // Only sign in anonymously if not an admin
+          await signInAnonymously(auth);
+        }
       }
     };
     initAuth();
@@ -1124,7 +1595,11 @@ export default function App() {
       setIsAdmin(adminStatus);
 
       if (adminStatus) {
+        // Store admin email to persist session
+        localStorage.setItem('adminEmail', currentUser.email);
         setView('admin');
+      } else {
+        localStorage.removeItem('adminEmail');
       }
     });
     return () => unsubscribe();
@@ -1133,18 +1608,153 @@ export default function App() {
   const handleAspirationSubmit = async (data) => {
     if (!user) return;
 
-    const code = generateTrackingCode();
-    const payload = {
-      ...data,
-      tracking_code: code,
-      status: 'received',
-      admin_reply: null,
-      created_at: serverTimestamp(),
-      user_uid: user.uid
-    };
-
     try {
+      // Step 1: Get user's IP address
+      const ipResponse = await fetch('/api/get-ip');
+      const ipData = await ipResponse.json();
+      const userIP = ipData.ip || 'unknown';
+
+      // Hash IP for storage
+      const hashIP = (ip) => {
+        let hash = 0;
+        for (let i = 0; i < ip.length; i++) {
+          const char = ip.charCodeAt(i);
+          hash = ((hash << 5) - hash) + char;
+          hash = hash & hash;
+        }
+        return Math.abs(hash).toString(16);
+      };
+
+      const ipHash = hashIP(userIP);
+
+      // Step 2: Check cooldown (CLIENT-SIDE)
+      try {
+        // Get admin settings
+        const settingsRef = doc(db, 'artifacts', appId, 'admin', 'settings');
+        const settingsSnap = await getDoc(settingsRef);
+        
+        const settings = settingsSnap.exists() 
+          ? settingsSnap.data() 
+          : { 
+              cooldown_days: 7, 
+              cooldown_enabled: true,
+              max_aspirations_per_period: 1,
+              allowed_categories: ['Akademik', 'Organisasi', 'Fasilitas', 'Kebijakan', 'Lainnya']
+            };
+
+        // If cooldown is enabled, check restrictions
+        if (settings.cooldown_enabled) {
+          // Check category restriction
+          if (settings.allowed_categories && !settings.allowed_categories.includes(data.category)) {
+            alert(`❌ Kategori "${data.category}" tidak diizinkan saat ini.`);
+            return;
+          }
+
+          // Check IP tracking
+          const ipTrackingRef = doc(db, 'artifacts', appId, 'ip_tracking', ipHash);
+          const ipTrackingSnap = await getDoc(ipTrackingRef);
+
+          if (ipTrackingSnap.exists()) {
+            const ipData = ipTrackingSnap.data();
+            
+            // Skip check if whitelisted
+            if (!ipData.is_whitelisted) {
+              const lastSubmission = ipData.last_submission_at?.toDate();
+              
+              if (lastSubmission) {
+                const cooldownMs = settings.cooldown_days * 24 * 60 * 60 * 1000;
+                const timeSinceLastSubmission = Date.now() - lastSubmission.getTime();
+                
+                // Check if still in cooldown period
+                if (timeSinceLastSubmission < cooldownMs) {
+                  const submissionCount = ipData.submission_count_in_period || 0;
+                  const maxSubmissions = settings.max_aspirations_per_period || 1;
+                  
+                  if (submissionCount >= maxSubmissions) {
+                    const timeRemaining = cooldownMs - timeSinceLastSubmission;
+                    const days = Math.ceil(timeRemaining / (24 * 60 * 60 * 1000));
+                    const hours = Math.ceil(timeRemaining / (60 * 60 * 1000));
+                    const timeUnit = days > 0 ? `${days} hari` : `${hours} jam`;
+                    
+                    alert(
+                      `⏰ Batas maksimal tercapai!\n\n` +
+                      `Anda sudah mengirim ${submissionCount} dari ${maxSubmissions} aspirasi yang diizinkan.\n\n` +
+                      `Mohon tunggu ${timeUnit} lagi untuk mengirim aspirasi baru.`
+                    );
+                    return;
+                  }
+                }
+              }
+            }
+          }
+        }
+      } catch (cooldownError) {
+        console.error('Error checking cooldown:', cooldownError);
+        // If cooldown check fails, continue with warning
+        const confirmed = confirm(
+          '⚠️ Tidak dapat memeriksa cooldown.\n\n' +
+          'Lanjutkan submit aspirasi?'
+        );
+        if (!confirmed) return;
+      }
+
+      // Step 3: Generate tracking code and prepare submission
+      const code = generateTrackingCode();
+
+      const payload = {
+        ...data,
+        tracking_code: code,
+        status: 'received',
+        admin_reply: null,
+        created_at: serverTimestamp(),
+        user_uid: user.uid,
+        ip_address: ipHash,
+        isAnonymous: true
+      };
+
+      // Step 4: Submit aspiration
       await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'aspirations'), payload);
+
+      // Step 5: Update IP tracking
+      const ipTrackingRef = doc(db, 'artifacts', appId, 'ip_tracking', ipHash);
+      const ipTrackingSnap = await getDoc(ipTrackingRef);
+      
+      // Get current period info
+      const now = new Date();
+      let submissionCountInPeriod = 1;
+      let periodStartedAt = now;
+      
+      if (ipTrackingSnap.exists()) {
+        const existingData = ipTrackingSnap.data();
+        const lastSubmission = existingData.last_submission_at?.toDate();
+        
+        // Check if still in same period
+        if (lastSubmission) {
+          const settingsSnap = await getDoc(doc(db, 'artifacts', appId, 'admin', 'settings'));
+          const settings = settingsSnap.exists() ? settingsSnap.data() : { cooldown_days: 7 };
+          const cooldownMs = settings.cooldown_days * 24 * 60 * 60 * 1000;
+          const timeSinceLastSubmission = now.getTime() - lastSubmission.getTime();
+          
+          if (timeSinceLastSubmission < cooldownMs) {
+            // Still in same period, increment count
+            submissionCountInPeriod = (existingData.submission_count_in_period || 0) + 1;
+            periodStartedAt = lastSubmission;
+          }
+        }
+      }
+      
+      const totalCount = ipTrackingSnap.exists() ? (ipTrackingSnap.data().submission_count || 0) + 1 : 1;
+      
+      await setDoc(ipTrackingRef, {
+        ip_address: ipHash,
+        ip_raw: userIP,
+        last_submission_at: serverTimestamp(),
+        last_tracking_code: code,
+        submission_count: totalCount,
+        submission_count_in_period: submissionCountInPeriod,
+        period_started_at: periodStartedAt
+      });
+
       setLastTrackingCode(code);
     } catch (e) {
       console.error("Error submitting:", e);
@@ -1170,14 +1780,7 @@ export default function App() {
         {view === 'landing' && <Hero setView={setView} user={user} db={db} appId={appId} />}
 
         {view === 'form' && (
-          lastTrackingCode ? (
-            <SuccessModal
-              trackingCode={lastTrackingCode}
-              onClose={() => { setLastTrackingCode(null); setView('landing'); }}
-            />
-          ) : (
-            <AspirationForm onSubmit={handleAspirationSubmit} />
-          )
+          <AspirationForm onSubmit={handleAspirationSubmit} />
         )}
 
         {view === 'tracking' && <TrackingView db={db} appId={appId} user={user} />}
@@ -1216,6 +1819,13 @@ export default function App() {
             </div>
           </div>
         </footer>
+      )}
+
+      {lastTrackingCode && (
+        <SuccessModal
+          trackingCode={lastTrackingCode}
+          onClose={() => { setLastTrackingCode(null); setView('landing'); }}
+        />
       )}
     </div>
   );

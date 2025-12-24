@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  /* config options here */
+  // Empty turbopack config to silence the warning
+  turbopack: {},
 };
 
 export default nextConfig;
