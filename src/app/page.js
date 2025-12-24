@@ -238,66 +238,88 @@ const ParticleBackground = () => {
 
 const Header = ({ currentView, setView, isAdmin, handleLogout }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   return (
-    <header className="fixed w-full top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 shadow-sm transition-all duration-300">
+    <header className={`fixed w-full top-0 z-[100] transition-all duration-500 ${scrolled ? 'py-3' : 'py-5'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-20">
-
-          <div className="flex items-center gap-3 cursor-pointer group select-none" onClick={() => !isAdmin && setView('landing')}>
-            <div className="flex -space-x-3 transition-all duration-500 group-hover:space-x-0">
-              <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-white border-2 border-slate-50 shadow-md flex items-center justify-center relative z-20">
-                <img src="/Logo_MPA.png" alt="MPA" className="w-full h-full object-cover" onError={(e) => e.target.style.display = 'none'} />
-                <span className="text-blue-700 font-extrabold text-[10px] tracking-tighter absolute" style={{ zIndex: -1 }}>MPA</span>
-              </div>
-              <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-blue-700 border-2 border-white shadow-md flex items-center justify-center relative z-10">
-                <img src="/Logo_HIMAKOM.png" alt="HIM" className="w-full h-full object-cover" onError={(e) => e.target.style.display = 'none'} />
-                <span className="text-white font-extrabold text-[10px] tracking-tighter absolute" style={{ zIndex: -1 }}>HIM</span>
+        <div className={`transition-all duration-500 rounded-[2rem] border ${scrolled ? 'bg-white/85 backdrop-blur-xl border-white/40 shadow-xl' : 'bg-transparent border-transparent'} h-20 flex justify-between items-center px-6`}>
+          
+          <div className="flex items-center gap-4 cursor-pointer group active:scale-95 transition-transform" onClick={() => !isAdmin && setView('landing')}>
+            <div className="relative group-hover:rotate-6 transition-transform duration-500">
+              <div className="flex -space-x-4">
+                <div className="w-10 h-10 md:w-12 md:h-12 rounded-full glass-card flex items-center justify-center relative z-20 overflow-hidden ring-4 ring-white/50">
+                  <img src="/Logo_MPA.png" alt="MPA" className="w-full h-full object-cover p-0.5" onError={(e) => e.target.style.display = 'none'} />
+                </div>
+                <div className="w-10 h-10 md:w-12 md:h-12 rounded-full premium-gradient flex items-center justify-center relative z-10 overflow-hidden ring-4 ring-white/50">
+                  <img src="/Logo_HIMAKOM.png" alt="HIM" className="w-full h-full object-cover p-1" onError={(e) => e.target.style.display = 'none'} />
+                </div>
               </div>
             </div>
+            
             <div className="flex flex-col">
-              <h1 className="text-sm md:text-lg font-bold text-slate-900 tracking-tight leading-none group-hover:text-blue-700 transition-colors">
+              <h1 className="text-sm md:text-xl font-black text-slate-900 tracking-tight leading-none group-hover:text-blue-700 transition-colors">
                 MPA HIMAKOM
               </h1>
-              <span className="text-[9px] md:text-[10px] text-slate-500 font-bold tracking-widest uppercase hidden md:block">
+              <span className="text-[10px] text-slate-500 font-extrabold tracking-[0.2em] uppercase hidden md:block mt-1">
                 Politeknik Negeri Bandung
               </span>
             </div>
-            <div className="h-8 w-px bg-slate-200 mx-1 hidden md:block"></div>
-            <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-white border-2 border-slate-50 shadow-sm flex items-center justify-center overflow-hidden transition-transform group-hover:scale-105">
-              <img src="/logo-polban.png" alt="POLBAN" className="w-full h-full object-contain p-1" onError={(e) => e.target.style.display = 'none'} />
-            </div>
           </div>
 
-          <nav className="hidden md:flex items-center space-x-6">
+          <nav className="hidden md:flex items-center gap-1 p-1.5 glass-card rounded-2xl">
             {isAdmin ? (
-              <div className="flex items-center gap-4 animate-fade-in">
-                <div className="flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-full border border-blue-100">
+              <div className="flex items-center gap-2 px-1">
+                <div className="flex items-center gap-2 bg-blue-50/50 px-4 py-2.5 rounded-xl border border-blue-100">
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-sm font-bold text-blue-900">Admin Mode</span>
+                  <span className="text-xs font-black text-blue-900 uppercase tracking-wider">Admin Dashboard</span>
                 </div>
                 <button
                   onClick={handleLogout}
-                  className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-red-600 transition-colors px-3 py-2 rounded-lg hover:bg-red-50"
+                  className="flex items-center gap-2 text-xs font-black text-slate-500 hover:text-white hover:bg-red-600 transition-all px-4 py-2.5 rounded-xl uppercase tracking-wider"
                 >
-                  <LogOut size={18} />
-                  Keluar
+                  <LogOut size={16} /> Keluar
                 </button>
               </div>
             ) : (
               <>
-                <button onClick={() => setView('landing')} className={`text-sm font-medium transition-colors ${currentView === 'landing' ? 'text-blue-700' : 'text-slate-600 hover:text-blue-700'}`}>Beranda</button>
-                <button onClick={() => setView('form')} className={`text-sm font-medium transition-colors ${currentView === 'form' ? 'text-blue-700' : 'text-slate-600 hover:text-blue-700'}`}>Kirim Aspirasi</button>
-                <button onClick={() => setView('tracking')} className={`text-sm font-medium transition-colors ${currentView === 'tracking' ? 'text-blue-700' : 'text-slate-600 hover:text-blue-700'}`}>Cek Status</button>
-                <button onClick={() => setView('login')} className="text-sm font-medium text-slate-400 hover:text-blue-700 flex items-center gap-1 px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-all">
-                  <Lock size={14} /> Admin
+                {[
+                  { id: 'landing', label: 'Beranda', icon: <LayoutDashboard size={14} /> },
+                  { id: 'form', label: 'Aspirasi', icon: <Megaphone size={14} /> },
+                  { id: 'tracking', label: 'Cek Status', icon: <Search size={14} /> },
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setView(item.id)}
+                    className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
+                      currentView === item.id 
+                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' 
+                        : 'text-slate-600 hover:text-blue-700 hover:bg-blue-50'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+                <div className="w-px h-6 bg-slate-200 mx-2"></div>
+                <button 
+                  onClick={() => setView('login')} 
+                  className="px-4 py-2.5 text-slate-400 hover:text-slate-900 transition-all"
+                  title="Admin Login"
+                >
+                  <Lock size={16} />
                 </button>
               </>
             )}
           </nav>
 
           <div className="md:hidden">
-            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-slate-600 p-2 hover:bg-slate-100 rounded-lg transition-colors">
+            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="glass-card p-3 rounded-2xl hover:bg-blue-50 transition-colors">
               {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
           </div>
@@ -305,35 +327,29 @@ const Header = ({ currentView, setView, isAdmin, handleLogout }) => {
       </div>
 
       {isMenuOpen && (
-        <div className="md:hidden bg-white/95 backdrop-blur-md border-t border-slate-100 shadow-xl absolute w-full animate-slide-down">
-          <div className="px-4 pt-2 pb-6 space-y-2 flex flex-col">
+        <div className="md:hidden px-4 mt-2">
+          <div className="glass-dark rounded-[2rem] p-4 flex flex-col gap-2 animate-slide-down">
             {isAdmin ? (
-              <>
-                <div className="p-3 bg-blue-50 rounded-lg mb-2 flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="font-bold text-blue-900">Dashboard Admin</span>
-                </div>
-                <button
-                  onClick={() => { handleLogout(); setIsMenuOpen(false); }}
-                  className="p-3 text-left font-medium text-red-600 hover:bg-red-50 rounded-lg flex items-center gap-2"
-                >
-                  <LogOut size={18} /> Keluar
-                </button>
-              </>
+              <button
+                onClick={() => { handleLogout(); setIsMenuOpen(false); }}
+                className="p-4 text-left font-black text-red-100 bg-red-500/10 rounded-2xl flex items-center gap-3 uppercase text-xs tracking-widest"
+              >
+                <LogOut size={20} /> Logout Admin
+              </button>
             ) : (
               <>
-                <button onClick={() => { setView('landing'); setIsMenuOpen(false); }} className="p-3 text-left font-medium text-slate-700 hover:bg-blue-50 rounded-lg flex items-center gap-3">
-                  <LayoutDashboard size={18} className="opacity-50" /> Beranda
+                <button onClick={() => { setView('landing'); setIsMenuOpen(false); }} className="p-4 text-left font-black text-white hover:bg-white/10 rounded-2xl flex items-center gap-4 transition-all uppercase text-xs tracking-widest">
+                  <LayoutDashboard size={20} className="text-blue-400" /> Beranda
                 </button>
-                <button onClick={() => { setView('form'); setIsMenuOpen(false); }} className="p-3 text-left font-medium text-slate-700 hover:bg-blue-50 rounded-lg flex items-center gap-3">
-                  <Megaphone size={18} className="opacity-50" /> Kirim Aspirasi
+                <button onClick={() => { setView('form'); setIsMenuOpen(false); }} className="p-4 text-left font-black text-white hover:bg-white/10 rounded-2xl flex items-center gap-4 transition-all uppercase text-xs tracking-widest">
+                  <Megaphone size={20} className="text-blue-400" /> Kirim Aspirasi
                 </button>
-                <button onClick={() => { setView('tracking'); setIsMenuOpen(false); }} className="p-3 text-left font-medium text-slate-700 hover:bg-blue-50 rounded-lg flex items-center gap-3">
-                  <Search size={18} className="opacity-50" /> Cek Status
+                <button onClick={() => { setView('tracking'); setIsMenuOpen(false); }} className="p-4 text-left font-black text-white hover:bg-white/10 rounded-2xl flex items-center gap-4 transition-all uppercase text-xs tracking-widest">
+                  <Search size={20} className="text-blue-400" /> Cek Status
                 </button>
-                <div className="h-px bg-slate-100 my-2"></div>
-                <button onClick={() => { setView('login'); setIsMenuOpen(false); }} className="p-3 text-left font-medium text-slate-500 hover:bg-slate-50 rounded-lg flex items-center gap-3">
-                  <Lock size={18} className="opacity-50" /> Login Admin
+                <div className="h-px bg-white/10 my-2"></div>
+                <button onClick={() => { setView('login'); setIsMenuOpen(false); }} className="p-4 text-left font-black text-slate-400 hover:bg-white/5 rounded-2xl flex items-center gap-4 transition-all uppercase text-xs tracking-widest">
+                  <Lock size={20} /> Login Admin
                 </button>
               </>
             )}
@@ -371,44 +387,61 @@ const PublicAspirationsTable = ({ db, appId, user }) => {
   );
 
   return (
-    <div className="mt-20 max-w-7xl mx-auto px-4 pb-20">
-      <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="p-6 border-b border-slate-200 bg-slate-50/50 flex flex-col md:flex-row justify-between items-center gap-4">
-          <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-            <Inbox size={20} className="text-blue-600" /> Daftar Aspirasi Masuk
-          </h3>
-          <div className="relative w-full md:w-64">
+    <div className="mt-10 max-w-7xl mx-auto px-4 pb-32 animate-fade-in-up [animation-delay:1000ms]">
+      <div className="glass-card rounded-[2.5rem] overflow-hidden border-white/40 shadow-2xl">
+        {/* Table Header */}
+        <div className="p-8 border-b border-slate-100 flex flex-col md:flex-row justify-between items-center gap-6">
+          <div>
+            <h3 className="text-2xl font-black text-slate-900 flex items-center gap-3">
+              <div className="w-10 h-10 premium-gradient rounded-xl flex items-center justify-center text-white shadow-lg">
+                <Inbox size={22} />
+              </div>
+              Aspirasi Terbaru
+            </h3>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-2 ml-13">Suara mahasiswa yang telah masuk</p>
+          </div>
+          
+          <div className="relative w-full md:w-80">
             <input
               type="text"
               placeholder="Cari aspirasi..."
-              className="w-full pl-9 pr-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"
+              className="w-full pl-12 pr-4 py-4 rounded-2xl border border-slate-100 bg-slate-50/50 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 focus:outline-none text-sm transition-all font-medium"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={14} />
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400" size={18} />
           </div>
         </div>
 
-        <div className="overflow-y-auto max-h-[350px]">
-          <table className="w-full text-left text-sm text-slate-600">
-            <thead className="bg-slate-50 text-slate-700 font-bold uppercase text-xs tracking-wider sticky top-0 z-10 shadow-sm">
-              <tr>
-                <th className="px-6 py-4 bg-slate-50">Tanggal</th>
-                <th className="px-6 py-4 bg-slate-50">Kategori</th>
-                <th className="px-6 py-4 bg-slate-50">Judul</th>
-                <th className="px-6 py-4 bg-slate-50">Status</th>
+        {/* Table Content */}
+        <div className="overflow-x-auto custom-scrollbar">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="bg-slate-50/50 text-slate-400 font-black uppercase text-[10px] tracking-[0.2em] border-b border-slate-100">
+                <th className="px-8 py-5">Waktu</th>
+                <th className="px-8 py-5">Kategori</th>
+                <th className="px-8 py-5">Topik Aspirasi</th>
+                <th className="px-8 py-5">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredData.map((item) => (
-                <tr key={item.id} className="hover:bg-blue-50/30 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap">{formatDate(item.created_at)}</td>
-                  <td className="px-6 py-4">
-                    <span className="bg-slate-100 px-2 py-1 rounded text-xs font-medium">{item.category}</span>
+                <tr key={item.id} className="group hover:bg-blue-50/30 transition-all cursor-default">
+                  <td className="px-8 py-6 whitespace-nowrap text-slate-500 font-medium">
+                    {formatDate(item.created_at)}
                   </td>
-                  <td className="px-6 py-4 font-medium text-slate-800 max-w-xs truncate">{item.title}</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${getStatusColor(item.status)}`}>
+                  <td className="px-8 py-6">
+                    <span className="px-3 py-1.5 rounded-lg bg-white border border-slate-100 text-[10px] font-black uppercase tracking-wider text-slate-600 shadow-sm group-hover:border-blue-200 transition-colors">
+                      {item.category}
+                    </span>
+                  </td>
+                  <td className="px-8 py-6 max-w-sm">
+                    <div className="font-black text-slate-800 truncate group-hover:text-blue-700 transition-colors">{item.title}</div>
+                    <div className="text-[10px] text-slate-400 font-mono mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">#{item.tracking_code}</div>
+                  </td>
+                  <td className="px-8 py-6">
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all ${getStatusColor(item.status)}`}>
+                      <div className="w-1.5 h-1.5 rounded-full bg-current"></div>
                       {getStatusLabel(item.status)}
                     </span>
                   </td>
@@ -416,17 +449,27 @@ const PublicAspirationsTable = ({ db, appId, user }) => {
               ))}
               {filteredData.length === 0 && (
                 <tr>
-                  <td colSpan="4" className="px-6 py-12 text-center text-slate-400">
-                    {user ? (searchTerm ? "Tidak ada hasil pencarian." : "Belum ada data aspirasi publik.") : "Memuat data..."}
+                  <td colSpan="4" className="px-8 py-20 text-center">
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-200">
+                        <Inbox size={32} />
+                      </div>
+                      <p className="text-slate-400 font-bold">
+                        {user ? (searchTerm ? "Tidak menemukan hasil pencarian." : "Belum ada aspirasi yang masuk.") : "Menghubungkan ke sistem..."}
+                      </p>
+                    </div>
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
-        <div className="bg-slate-50 p-2 text-center text-xs text-slate-400 border-t border-slate-100">
-          Scroll untuk melihat lebih banyak
-        </div>
+        
+        {filteredData.length > 0 && (
+          <div className="bg-slate-50/50 p-4 text-center border-t border-slate-100">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">🛡️ Semua Identitas Mahasiswa Disembunyikan</p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -434,55 +477,57 @@ const PublicAspirationsTable = ({ db, appId, user }) => {
 
 const Hero = ({ setView, user, db, appId }) => (
   <>
-    <div className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden flex flex-col justify-center">
-      <div className="absolute top-0 right-0 w-1/2 h-full bg-blue-600/5 skew-x-12 blur-3xl -z-10" />
-      <div className="absolute bottom-0 left-0 w-1/3 h-2/3 bg-sky-400/5 -skew-x-12 blur-3xl -z-10" />
-
+    <div className="relative pt-40 pb-20 lg:pt-56 lg:pb-40 overflow-hidden flex flex-col justify-center">
+      {/* Dynamic Background Elements */}
+      <div className="absolute top-0 right-[-10%] w-[60%] h-[70%] bg-blue-600/10 rounded-full blur-[120px] -z-10 animate-pulse-soft" />
+      <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[60%] bg-sky-400/10 rounded-full blur-[100px] -z-10 animate-float" />
+      
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/50 backdrop-blur-sm border border-blue-100 text-blue-800 text-sm font-semibold mb-8 animate-fade-in-up shadow-sm">
-          <ShieldCheck size={16} />
+        <div className="inline-flex items-center gap-3 px-6 py-2.5 rounded-full glass-card border-blue-100 text-blue-700 text-xs font-black uppercase tracking-[0.2em] mb-10 animate-fade-in-up">
+          <ShieldCheck size={18} className="animate-pulse" />
           <span>Anonim & Terpercaya</span>
         </div>
 
-        <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold text-slate-900 tracking-tight mb-8 drop-shadow-sm">
+        <h1 className="text-5xl md:text-8xl font-black text-slate-900 tracking-tighter mb-8 animate-fade-in-up [animation-delay:200ms] leading-[0.9]">
           Suarakan Aspirasi <br className="hidden md:block" />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-700 via-blue-600 to-sky-500">Tanpa Takut.</span>
+          <span className="text-gradient">Tanpa Takut.</span>
         </h1>
 
-        <p className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto mb-12 leading-relaxed">
-          MPA HIMAKOM hadir menjaga suaramu. Sampaikan kritik, saran, dan aspirasi untuk kemajuan bersama. Identitasmu aman bersama kami.
+        <p className="text-lg md:text-2xl text-slate-500 max-w-2xl mx-auto mb-14 font-medium leading-relaxed animate-fade-in-up [animation-delay:400ms]">
+          MPA HIMAKOM hadir menjaga suaramu. Sampaikan kritik dan pengalamanmu untuk <span className="text-slate-900 font-bold underline decoration-blue-500 decoration-4">HIMAKOM yang lebih baik</span>.
         </p>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-6 animate-fade-in-up [animation-delay:600ms]">
           <button
             onClick={() => setView('form')}
-            className="w-full sm:w-auto px-8 py-4 bg-blue-800 hover:bg-blue-900 text-white font-bold rounded-2xl shadow-xl shadow-blue-900/20 transition-all transform hover:-translate-y-1 hover:shadow-2xl flex items-center justify-center gap-2"
+            className="w-full sm:w-auto px-10 py-5 premium-gradient hover:brightness-110 text-white font-black rounded-3xl premium-shadow border-t border-white/20 transition-all active:scale-95 flex items-center justify-center gap-3 group"
           >
-            <Megaphone size={20} />
-            Kirim Aspirasi Sekarang
+            <Megaphone size={22} className="group-hover:rotate-12 transition-transform" />
+            Kirim Aspirasi
           </button>
           <button
             onClick={() => setView('tracking')}
-            className="w-full sm:w-auto px-8 py-4 bg-white/80 backdrop-blur-sm hover:bg-white text-slate-700 border border-slate-200 font-bold rounded-2xl transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2"
+            className="w-full sm:w-auto px-10 py-5 glass-card hover:bg-white text-slate-700 border-2 border-slate-100 font-black rounded-3xl transition-all shadow-xl hover:shadow-2xl flex items-center justify-center gap-3 active:scale-95 group"
           >
-            <Search size={20} />
-            Lacak Aspirasi
+            <Search size={22} className="group-hover:scale-110 transition-transform" />
+            Lacak Status
           </button>
         </div>
 
-        <div className="mt-20 grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-8 max-w-4xl mx-auto">
-          <div className="bg-white/60 backdrop-blur-md p-6 rounded-2xl shadow-sm border border-white/50 hover:bg-white transition-all">
-            <div className="text-3xl md:text-4xl font-bold text-blue-700 mb-2">100%</div>
-            <div className="text-sm text-slate-600 font-medium">Privasi Terjaga</div>
-          </div>
-          <div className="bg-white/60 backdrop-blur-md p-6 rounded-2xl shadow-sm border border-white/50 hover:bg-white transition-all">
-            <div className="text-3xl md:text-4xl font-bold text-blue-700 mb-2">24/7</div>
-            <div className="text-sm text-slate-600 font-medium">Waktu Penerimaan</div>
-          </div>
-          <div className="bg-white/60 backdrop-blur-md p-6 rounded-2xl shadow-sm border border-white/50 hover:bg-white transition-all">
-            <div className="text-3xl md:text-4xl font-bold text-blue-700 mb-2">Respon</div>
-            <div className="text-sm text-slate-600 font-medium">Tanggapan Resmi MPA</div>
-          </div>
+        {/* Stats Section */}
+        <div className="mt-28 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-5xl mx-auto animate-fade-in-up [animation-delay:800ms]">
+          {[
+            { label: 'Privasi', val: '100%', sub: 'E2E Anonymous' },
+            { label: 'Respon', val: '< 3 Hari', sub: 'Tanggapan Resmi' },
+            { label: 'Aktif', val: '24/7', sub: 'Sistem Terbuka' },
+            { label: 'Total', val: '500+', sub: 'Aspirasi Masuk' }
+          ].map((stat, i) => (
+            <div key={i} className="glass-card p-6 rounded-[2.5rem] border-white/60 hover:border-blue-200 transition-all hover:-translate-y-2">
+              <div className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">{stat.label}</div>
+              <div className="text-2xl md:text-3xl font-black text-blue-800 tracking-tighter">{stat.val}</div>
+              <div className="text-[10px] text-slate-400 font-bold uppercase mt-1">{stat.sub}</div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
@@ -610,138 +655,148 @@ const AspirationForm = ({ onSubmit }) => {
   };
 
   return (
-    <div className="pt-28 pb-20 max-w-3xl mx-auto px-4">
-      <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/50 overflow-hidden animate-fade-in-up">
-        <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-blue-600 p-8 text-white relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10 blur-2xl"></div>
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-5 -mb-5 blur-xl"></div>
-
-          <h2 className="text-2xl font-bold mb-2 flex items-center gap-2 relative z-10">
-            <FileText className="text-blue-200" /> Form Aspirasi
-          </h2>
-          <p className="opacity-90 relative z-10 text-blue-100">Silakan isi formulir di bawah ini. Gunakan bahasa yang sopan dan jelas.</p>
+    <div className="pt-32 pb-32 max-w-4xl mx-auto px-4">
+      <div className="glass-card rounded-[3rem] shadow-2xl overflow-hidden border-white/50 animate-fade-in-up">
+        {/* Form Header */}
+        <div className="premium-gradient p-10 text-white relative overflow-hidden">
+          <div className="absolute top-0 right-[-5%] w-48 h-48 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div>
+              <h2 className="text-3xl font-black mb-2 flex items-center gap-3">
+                <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center">
+                  <Megaphone size={28} />
+                </div>
+                Suarakan Aspirasimu
+              </h2>
+              <p className="font-medium text-blue-50 opacity-90 max-w-md leading-relaxed">Sampaikan aspirasi, keluhan, atau saran Anda dengan aman dan anonim melalui sistem resmi MPA HIMAKOM.</p>
+            </div>
+            
+            {quotaInfo && (
+              <div className="bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-3xl flex items-center gap-4 shrink-0">
+                <div className="text-right">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-blue-100">Quota Perangkat</p>
+                  <p className="text-xl font-black">{quotaInfo.remainingQuota}/{quotaInfo.maxQuota}</p>
+                </div>
+                <div className="w-px h-8 bg-white/20"></div>
+                <ShieldCheck size={28} className="text-blue-100" />
+              </div>
+            )}
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6">
-          <div className="space-y-2">
-            <label className="text-sm font-bold text-slate-700 ml-1">Kategori Aspirasi</label>
-            <div className="relative">
-              <select
-                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl appearance-none focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all font-medium text-slate-700"
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              >
-                <option value="Akademik">Akademik</option>
-                <option value="Organisasi">Organisasi</option>
-                <option value="Fasilitas">Fasilitas</option>
-                <option value="Kebijakan">Kebijakan</option>
-                <option value="Lainnya">Lainnya</option>
-              </select>
-              <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none text-slate-500">
-                <ChevronRight className="rotate-90" size={18} />
+        <form onSubmit={handleSubmit} className="p-8 md:p-12 space-y-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-3 focus-within:translate-x-1 transition-transform">
+              <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                <Filter size={14} className="text-blue-500" /> Kategori Aspirasi
+              </label>
+              <div className="relative group">
+                <select
+                  className="w-full p-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] appearance-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 focus:outline-none transition-all font-black text-slate-700 shadow-sm"
+                  value={formData.category}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                >
+                  {['Akademik', 'Organisasi', 'Fasilitas', 'Kebijakan', 'Lainnya'].map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+                <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 group-hover:text-blue-500 transition-colors">
+                  <ChevronRight className="rotate-90" size={18} />
+                </div>
               </div>
+            </div>
+
+            <div className="space-y-3 focus-within:translate-x-1 transition-transform">
+              <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                <FileText size={14} className="text-blue-500" /> Judul Topik
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="Contoh: Perbaikan AC Lab..."
+                className="w-full p-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 focus:outline-none transition-all font-bold text-slate-700 shadow-sm placeholder:text-slate-300"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              />
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-bold text-slate-700 ml-1">Judul Aspirasi</label>
-            <input
-              type="text"
-              required
-              placeholder="Contoh: Kendala AC di Ruang Lab 1"
-              className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all font-medium placeholder:font-normal"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-bold text-slate-700 ml-1">Isi Aspirasi</label>
+          <div className="space-y-3 focus-within:translate-x-1 transition-transform">
+            <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+              <MessageCircle size={14} className="text-blue-500" /> Pesan Aspirasi
+            </label>
             <textarea
               required
-              rows={5}
-              placeholder="Jelaskan aspirasimu secara detail..."
-              className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all resize-none"
+              rows={6}
+              placeholder="Jelaskan aspiramu secara lengkap, objektif dan jelas agar kami dapat memprosesnya dengan baik..."
+              className="w-full p-6 bg-slate-50 border border-slate-100 rounded-[2rem] focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 focus:outline-none transition-all font-medium text-slate-700 shadow-sm leading-relaxed"
               value={formData.message}
               onChange={(e) => setFormData({ ...formData, message: e.target.value })}
             />
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-bold text-slate-700 ml-1">Lampiran Foto (Opsional)</label>
-            <div className="space-y-3">
+          <div className="space-y-3">
+            <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+              <Clock size={14} className="text-blue-500" /> Lampiran Bukti (Opsional)
+            </label>
+            <div className="relative group">
               {!imagePreview ? (
-                <label className="w-full p-6 bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl hover:border-blue-500 hover:bg-blue-50/30 transition-all cursor-pointer flex flex-col items-center gap-3 group">
-                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 group-hover:bg-blue-200 transition-colors">
-                    <FileText size={32} />
+                <label className="flex flex-col items-center justify-center w-full p-8 bg-slate-50/50 border-2 border-dashed border-slate-200 rounded-[2rem] cursor-pointer hover:bg-blue-50/50 hover:border-blue-300 transition-all active:scale-[0.99]">
+                  <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center text-slate-300 group-hover:text-blue-500 group-hover:shadow-md transition-all mb-4">
+                    <Send size={24} className="rotate-45" />
                   </div>
                   <div className="text-center">
-                    <p className="font-bold text-slate-700 group-hover:text-blue-700">Klik untuk upload foto</p>
-                    <p className="text-xs text-slate-500 mt-1">PNG, JPG, atau JPEG (max 2MB)</p>
+                    <p className="text-sm font-black text-slate-600">Klik untuk upload lampiran foto</p>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 tracking-wider">Maksimal 2MB (JPG/PNG)</p>
                   </div>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                    className="hidden"
-                  />
+                  <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
                 </label>
               ) : (
-                <div className="relative group">
-                  <img
-                    src={imagePreview}
-                    alt="Preview"
-                    className="w-full rounded-xl border-2 border-slate-200 shadow-sm"
-                  />
-                  <button
-                    type="button"
-                    onClick={removeImage}
-                    className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors shadow-lg"
-                  >
-                    <X size={18} />
-                  </button>
+                <div className="relative rounded-[2rem] overflow-hidden group shadow-xl">
+                  <img src={imagePreview} alt="Preview" className="w-full object-cover max-h-96" />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <button
+                      type="button"
+                      onClick={removeImage}
+                      className="bg-red-500 text-white p-4 rounded-2xl hover:bg-red-600 transition-all font-black"
+                    >
+                      Hapus Lampiran
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
           </div>
 
-          {/* User Quota Info */}
-          {quotaInfo && (
-            <div className="bg-gradient-to-r from-slate-50 to-slate-100 p-4 rounded-xl border border-slate-200">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-white p-3 rounded-lg border border-slate-200">
-                  <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">IP Address</p>
-                  <p className="text-xs font-mono text-slate-700">{quotaInfo.ip}</p>
-                </div>
-                <div className="bg-white p-3 rounded-lg border border-slate-200">
-                  <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">Quota Tersisa</p>
-                  <p className="text-lg font-bold text-blue-700">
-                    {quotaInfo.cooldownEnabled ? `${quotaInfo.remainingQuota}/${quotaInfo.maxQuota}` : '∞'}
-                  </p>
-                </div>
-              </div>
-              {quotaInfo.cooldownEnabled && quotaInfo.nextResetDate && (
-                <div className="mt-2 text-[10px] text-slate-500 text-center">
-                  Reset: {quotaInfo.nextResetDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                </div>
-              )}
+          {/* Guidelines Box */}
+          <div className="bg-blue-50/50 border border-blue-100 rounded-3xl p-6 flex gap-4 items-start shadow-inner">
+            <div className="w-10 h-10 bg-blue-100/50 rounded-xl flex items-center justify-center text-blue-600 shrink-0">
+              <ShieldCheck size={20} />
             </div>
-          )}
-
-          <div className="bg-blue-50 p-4 rounded-xl border border-blue-200 flex items-start gap-3">
-            <ShieldCheck size={20} className="text-blue-600 mt-0.5 shrink-0" />
-            <div className="text-sm text-blue-900">
-              <p className="font-bold mb-1">Semua Aspirasi Anonim</p>
-              <p className="text-blue-700 text-xs">Identitas Anda sepenuhnya dilindungi. Tidak ada nama yang akan ditampilkan.</p>
+            <div>
+              <p className="text-sm font-black text-blue-900 mb-1 leading-tight">Privasi Anda Prioritas Kami</p>
+              <p className="text-xs font-medium text-blue-700 leading-relaxed">
+                Kami tidak merekam nama, NIM, atau data pribadi lainnya. Laporan Anda tercatat secara anonim dan hanya diidentifikasi melalui kode tracking unik.
+              </p>
             </div>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-4 bg-blue-800 hover:bg-blue-900 text-white font-bold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-70 active:scale-[0.98]"
+            className="w-full p-6 premium-gradient hover:brightness-110 text-white font-black rounded-3xl premium-shadow border-t border-white/20 transition-all flex items-center justify-center gap-3 disabled:opacity-50 active:scale-95 text-lg"
           >
-            {loading ? 'Mengirim...' : <><Send size={18} /> Kirim Aspirasi</>}
+            {loading ? (
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
+                Mengirim...
+              </div>
+            ) : (
+              <>
+                <Megaphone size={24} />
+                Kirim Aspirasi Sekarang
+              </>
+            )}
           </button>
         </form>
       </div>
@@ -894,6 +949,100 @@ const SuccessModal = ({ trackingCode, onClose }) => {
 };
 
 
+// --- LOCAL HISTORY COMPONENT ---
+const LocalHistory = ({ onSelect, currentCode }) => {
+  const [history, setHistory] = useState([]);
+  const [copiedCode, setCopiedCode] = useState(null);
+
+  useEffect(() => {
+    const saved = JSON.parse(localStorage.getItem('aspirationHistory') || '[]');
+    setHistory(saved);
+  }, []);
+
+  const handleCopy = (e, code) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(code);
+    setCopiedCode(code);
+    setTimeout(() => setCopiedCode(null), 2000);
+  };
+
+  const removeHistoryItem = (e, code) => {
+    e.stopPropagation();
+    const updated = history.filter(item => item.code !== code);
+    setHistory(updated);
+    localStorage.setItem('aspirationHistory', JSON.stringify(updated));
+  };
+
+  if (history.length === 0) return null;
+
+  return (
+    <div className="mb-12 animate-fade-in [animation-delay:200ms]">
+      <div className="flex items-center justify-between mb-5 px-1">
+        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+          <Clock size={14} className="text-blue-500" /> Riwayat Pencarian Lokal
+        </h3>
+        <button 
+          onClick={() => { if(confirm('Hapus semua riwayat di perangkat ini?')) { localStorage.removeItem('aspirationHistory'); setHistory([]); } }}
+          className="text-[10px] font-black text-red-400 hover:text-red-600 transition-colors uppercase tracking-widest"
+        >
+          Bersihkan Semua
+        </button>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {history.slice(0, 4).map((item) => (
+          <div 
+            key={item.code}
+            onClick={() => onSelect(item.code)}
+            className={`group p-4 rounded-[2rem] border transition-all cursor-pointer flex items-center justify-between ${
+              currentCode === item.code 
+                ? 'bg-blue-600 border-blue-600 text-white shadow-xl shadow-blue-500/20' 
+                : 'bg-white border-slate-100 hover:border-blue-200 hover:shadow-lg'
+            }`}
+          >
+            <div className="flex-1 min-w-0 pr-3">
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className={`font-mono font-black text-sm tracking-widest ${currentCode === item.code ? 'text-white' : 'text-blue-900'}`}>
+                  {item.code}
+                </span>
+                <span className={`text-[9px] px-2 py-0.5 rounded-lg font-black uppercase tracking-wider ${currentCode === item.code ? 'bg-white/20 text-white' : 'bg-slate-50 text-slate-500 border border-slate-100'}`}>
+                  {item.category}
+                </span>
+              </div>
+              <p className={`text-[11px] font-bold truncate ${currentCode === item.code ? 'text-blue-100' : 'text-slate-500'}`}>
+                {item.title}
+              </p>
+            </div>
+            <div className="flex items-center gap-1.5 translate-x-2 group-hover:translate-x-0 transition-transform">
+              <button
+                onClick={(e) => handleCopy(e, item.code)}
+                className={`p-2.5 rounded-xl transition-all ${
+                  currentCode === item.code 
+                    ? 'hover:bg-white/20 text-white' 
+                    : 'hover:bg-blue-50 text-blue-600'
+                }`}
+                title="Salin Kode"
+              >
+                {copiedCode === item.code ? <Check size={18} /> : <Copy size={18} />}
+              </button>
+              <button
+                onClick={(e) => removeHistoryItem(e, item.code)}
+                className={`p-2.5 rounded-xl opacity-0 group-hover:opacity-100 transition-all ${
+                  currentCode === item.code 
+                    ? 'hover:bg-white/20 text-white' 
+                    : 'hover:bg-red-50 text-red-500'
+                }`}
+                title="Hapus"
+              >
+                <Trash2 size={18} />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 const TrackingView = ({ db, appId, user }) => {
   const [code, setCode] = useState('');
   const [result, setResult] = useState(null);
@@ -931,101 +1080,135 @@ const TrackingView = ({ db, appId, user }) => {
   };
 
   return (
-    <div className="pt-32 pb-20 min-h-screen">
-      <div className="max-w-2xl mx-auto px-4">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4">Lacak Status Aspirasi</h2>
-          <p className="text-slate-600 text-lg">Masukkan kode unik yang Anda dapatkan untuk melihat progress tindak lanjut.</p>
+    <div className="pt-40 pb-32 min-h-screen">
+      <div className="max-w-4xl mx-auto px-4">
+        {/* Header Section */}
+        <div className="text-center mb-16 animate-fade-in-up">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-blue-100 rounded-[2rem] text-blue-700 mb-8 shadow-inner ring-8 ring-blue-50/50">
+            <Search size={32} />
+          </div>
+          <h2 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tighter mb-6">Lacak Status</h2>
+          <p className="text-slate-500 text-lg font-medium max-w-lg mx-auto leading-relaxed">Lihat perkembangan dan transparansi tindak lanjut dari setiap aspirasi yang Anda kirimkan.</p>
         </div>
 
-        <div className="bg-white/80 backdrop-blur-md p-2 rounded-2xl shadow-lg border border-white/50 mb-10">
-          <form onSubmit={handleTrack} className="flex flex-col sm:flex-row gap-2">
-            <input
-              type="text"
-              placeholder="Masukkan Kode (cth: MPA-X92F)"
-              className="flex-1 p-4 rounded-xl border border-slate-200 shadow-inner focus:ring-2 focus:ring-blue-500 outline-none font-mono uppercase text-lg text-center sm:text-left bg-slate-50/50"
-              value={code}
-              onChange={(e) => setCode(e.target.value.toUpperCase())}
-            />
-            <button type="submit" disabled={loading} className="bg-blue-800 text-white px-8 py-4 rounded-xl font-bold hover:bg-blue-900 transition-colors disabled:opacity-70 flex justify-center items-center shadow-lg shadow-blue-900/20">
-              {loading ? 'Searching...' : <Search />}
+        {/* Input Card */}
+        <div className="glass-card rounded-[3rem] p-3 mb-12 shadow-2xl border-white/60 animate-fade-in-up [animation-delay:100ms]">
+          <form onSubmit={handleTrack} className="flex flex-col md:flex-row gap-3">
+            <div className="relative flex-1">
+              <input
+                type="text"
+                placeholder="CONTOH: MPA-X92F"
+                className="w-full px-8 py-5 rounded-[2rem] bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white outline-none font-mono font-black uppercase text-xl text-center md:text-left text-blue-900 transition-all shadow-inner tracking-widest"
+                value={code}
+                onChange={(e) => setCode(e.target.value.toUpperCase())}
+              />
+              <div className="absolute right-5 top-1/2 -translate-y-1/2 hidden md:block opacity-20">
+                <Clock size={24} />
+              </div>
+            </div>
+            <button 
+              type="submit" 
+              disabled={loading} 
+              className="px-12 py-5 premium-gradient text-white font-black rounded-[2rem] shadow-xl hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-3 text-lg"
+            >
+              {loading ? (
+                <div className="w-6 h-6 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
+              ) : (
+                <>
+                  <Search size={22} />
+                  Cek Sekarang
+                </>
+              )}
             </button>
           </form>
         </div>
 
+        {/* Local History Section */}
+        <LocalHistory onSelect={(c) => { setCode(c); }} currentCode={code} />
+
         {error && (
-          <div className="bg-red-50 text-red-600 p-4 rounded-xl border border-red-100 flex items-center gap-3 animate-shake shadow-sm">
-            <AlertCircle size={24} className="shrink-0" /> <span className="font-medium">{error}</span>
+          <div className="bg-red-50 text-red-600 p-6 rounded-[2rem] border-2 border-red-100 flex items-center gap-4 animate-shake shadow-lg mb-10">
+            <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-red-500 shadow-sm shrink-0">
+              <AlertCircle size={24} />
+            </div>
+            <span className="font-black text-sm uppercase tracking-wider">{error}</span>
           </div>
         )}
 
         {result && (
-          <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-100 overflow-hidden animate-fade-in-up">
-            <div className="p-6 md:p-8 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row justify-between items-start gap-4">
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${getStatusColor(result.status)}`}>
-                    {result.status === 'finished' && <CheckCircle size={12} />}
+          <div className="glass-card rounded-[3rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.15)] border-white/60 overflow-hidden animate-fade-in-up [animation-delay:300ms]">
+            <div className="p-10 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row justify-between items-start gap-8">
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.15em] border transition-all shadow-sm ${getStatusColor(result.status)}`}>
+                    <div className="w-2 h-2 rounded-full bg-current animate-pulse"></div>
                     {getStatusLabel(result.status)}
                   </span>
-                  <span className="text-xs text-slate-400">• {result.category}</span>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{result.category}</span>
                 </div>
-                <h3 className="text-xl md:text-2xl font-bold text-slate-800 leading-snug">{result.title}</h3>
-                <div className="text-sm text-slate-500 mt-2 flex items-center gap-2">
-                  <Clock size={14} /> Dikirim pada {formatDate(result.created_at)}
+                <h3 className="text-3xl font-black text-slate-900 leading-[1.1] tracking-tight">{result.title}</h3>
+                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 pt-2">
+                  <Clock size={14} className="text-blue-500" /> Dikirim pada {formatDate(result.created_at)}
                 </div>
               </div>
-              <div className="text-left md:text-right bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
-                <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Kode Tracking</div>
-                <div className="font-mono font-bold text-xl text-blue-700">{result.tracking_code}</div>
+              <div className="text-left md:text-right bg-white p-5 rounded-3xl border border-slate-100 shadow-lg ring-1 ring-slate-50 ring-offset-4">
+                <div className="text-[10px] text-slate-400 uppercase font-black tracking-[0.2em] mb-2">Kode Tracking</div>
+                <div className="font-mono font-black text-3xl text-blue-800 tracking-tighter">{result.tracking_code}</div>
               </div>
             </div>
 
-            <div className="p-6 md:p-8">
+            <div className="p-10 md:p-14 space-y-16">
               {result.image && (
-                <div className="mb-8">
-                  <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wide mb-3">Lampiran Foto</h4>
-                  <img
-                    src={result.image}
-                    alt="Lampiran aspirasi"
-                    className="w-full rounded-xl border-2 border-slate-200 shadow-md hover:shadow-xl transition-shadow cursor-pointer"
-                    onClick={() => window.open(result.image, '_blank')}
-                  />
-                  <p className="text-xs text-slate-500 mt-2 text-center">Klik gambar untuk melihat ukuran penuh</p>
+                <div className="space-y-6">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-3">
+                    <div className="w-1 h-3 premium-gradient rounded-full"></div>
+                    Lampiran Foto Bukti
+                  </h4>
+                  <div className="group relative rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white cursor-zoom-in transition-transform hover:scale-[1.02]" onClick={() => window.open(result.image, '_blank')}>
+                    <img src={result.image} alt="Lampiran" className="w-full object-cover max-h-[500px]" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-black text-xs uppercase tracking-widest">
+                      Klik untuk memperbesar
+                    </div>
+                  </div>
                 </div>
               )}
 
-              <div className="mb-8">
-                <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wide mb-3">Pesan Aspirasi</h4>
-                <p className="text-slate-700 text-base md:text-lg leading-relaxed whitespace-pre-line bg-slate-50 p-4 rounded-xl border border-slate-100">
+              <div className="space-y-6">
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-3">
+                  <div className="w-1 h-3 premium-gradient rounded-full"></div>
+                  Rincian Aspirasi
+                </h4>
+                <div className="bg-slate-50/50 p-8 rounded-[2rem] border border-slate-100 text-slate-700 font-medium text-lg leading-relaxed shadow-inner">
                   {result.message}
-                </p>
+                </div>
               </div>
 
+              {/* Reply Section */}
               <div className="relative">
-                <div className="absolute -left-3 top-0 bottom-0 w-1 bg-blue-100 rounded-full"></div>
+                <div className="absolute -left-6 top-0 bottom-0 w-1.5 premium-gradient rounded-full opacity-30"></div>
                 {result.admin_reply ? (
-                  <div className="pl-6">
-                    <h4 className="text-sm font-bold text-blue-900 mb-3 flex items-center gap-2">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-700">
-                        <Megaphone size={16} />
+                  <div className="pl-8 space-y-6">
+                    <h4 className="text-[10px] font-black text-blue-900 uppercase tracking-[0.2em] flex items-center gap-3">
+                      <div className="w-10 h-10 premium-gradient rounded-2xl flex items-center justify-center text-white shadow-lg">
+                        <Megaphone size={18} />
                       </div>
                       Tanggapan Resmi MPA
                     </h4>
-                    <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-6 text-slate-800 leading-relaxed shadow-sm">
+                    <div className="bg-blue-600 p-8 rounded-[2.5rem] text-white font-bold leading-relaxed shadow-2xl shadow-blue-600/20 relative group">
+                      <div className="absolute -top-3 -left-3 w-10 h-10 bg-white/10 rounded-full blur-xl group-hover:scale-150 transition-transform"></div>
                       {result.admin_reply}
                     </div>
                   </div>
                 ) : (
-                  <div className="pl-6">
-                    <h4 className="text-sm font-bold text-slate-400 mb-3 flex items-center gap-2 opacity-70">
-                      <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center">
-                        <Clock size={16} />
+                  <div className="pl-8 space-y-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400">
+                        <Clock size={18} />
                       </div>
-                      Menunggu Tanggapan
-                    </h4>
-                    <div className="text-slate-400 text-sm italic bg-slate-50 border border-slate-100 border-dashed rounded-xl p-6">
-                      Aspirasi Anda sedang ditinjau oleh tim MPA. Mohon menunggu update selanjutnya.
+                      <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Menunggu Tanggapan</h4>
+                    </div>
+                    <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-[2.5rem] p-10 text-center">
+                      <p className="text-slate-400 font-bold max-w-sm mx-auto leading-relaxed italic">Tim MPA sedang mengalisis aspirasi ini. Mohon periksa kembali secara berkala.</p>
                     </div>
                   </div>
                 )}
@@ -1565,45 +1748,133 @@ const AdminDashboard = ({ db, appId, user }) => {
   );
 }
 
-// --- MAIN APP COMPONENT ---
+const Footer = () => (
+  <footer className="relative bg-slate-900 pt-32 pb-16 overflow-hidden">
+    {/* Decorative Elements */}
+    <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-blue-500/50 to-transparent"></div>
+    <div className="absolute top-[20%] right-[-10%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[120px]"></div>
+    <div className="absolute bottom-[-10%] left-[-10%] w-[30%] h-[30%] bg-sky-500/10 rounded-full blur-[100px]"></div>
 
-export default function App() {
+    <div className="max-w-7xl mx-auto px-6 relative z-10">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-16 mb-24">
+        {/* Brand Section */}
+        <div className="md:col-span-5 space-y-8">
+          <div className="flex items-center gap-4 group">
+            <div className="flex -space-x-4">
+              <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-lg transform group-hover:-rotate-6 transition-transform">
+                <img src="/Logo_MPA.png" alt="MPA" className="w-8 h-8 object-contain" />
+              </div>
+              <div className="w-12 h-12 rounded-2xl premium-gradient flex items-center justify-center shadow-lg transform group-hover:rotate-6 transition-transform">
+                <img src="/Logo_HIMAKOM.png" alt="HIM" className="w-8 h-8 object-contain" />
+              </div>
+            </div>
+            <div>
+              <h3 className="text-white text-xl font-black tracking-tighter">MPA HIMAKOM</h3>
+              <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em] mt-1">Sistem Aspirasi Terpadu</p>
+            </div>
+          </div>
+          <p className="text-slate-400 font-medium leading-relaxed max-w-sm">
+            Menjadi jembatan aspirasi mahasiswa yang aman, transparan, dan terpercaya demi kemajuan HIMAKOM Politeknik Negeri Bandung.
+          </p>
+          <div className="flex gap-4">
+            <a href="https://instagram.com/himakompolban" target="_blank" className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-blue-600 hover:border-blue-500 transition-all shadow-xl group">
+              <Instagram size={20} className="group-hover:scale-110 transition-transform" />
+            </a>
+            <a href="#" className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-green-600 hover:border-green-500 transition-all shadow-xl group">
+              <Phone size={20} className="group-hover:scale-110 transition-transform" />
+            </a>
+            <a href="mailto:mpahimakom@gmail.com" className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-red-600 hover:border-red-500 transition-all shadow-xl group">
+              <Mail size={20} className="group-hover:scale-110 transition-transform" />
+            </a>
+          </div>
+        </div>
+
+        {/* Quick Links */}
+        <div className="md:col-span-3 space-y-8">
+          <h4 className="text-white text-xs font-black uppercase tracking-[0.3em]">Navigasi</h4>
+          <ul className="space-y-5">
+            {[
+              { label: 'Beranda Utama', icon: <LayoutDashboard size={14} /> },
+              { label: 'Formulir Aspirasi', icon: <Megaphone size={14} /> },
+              { label: 'Tracking Status', icon: <Search size={14} /> },
+              { label: 'Portal Pengurus', icon: <Lock size={14} /> }
+            ].map((link, i) => (
+              <li key={i}>
+                <a href="#" className="text-slate-400 hover:text-blue-400 font-bold text-sm transition-colors flex items-center gap-3 group">
+                  <span className="text-blue-500/50 group-hover:text-blue-500 transition-colors">{link.icon}</span>
+                  {link.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Support */}
+        <div className="md:col-span-4 space-y-8">
+          <h4 className="text-white text-xs font-black uppercase tracking-[0.3em]">Dukungan Sistem</h4>
+          <div className="bg-white/5 rounded-3xl p-6 border border-white/10 space-y-4">
+            <p className="text-slate-400 text-sm font-medium leading-relaxed">
+              Ada kendala dalam penggunaan sistem? Hubungi pengembang kami.
+            </p>
+            <a href="#" className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-white/10 text-white font-black text-[10px] uppercase tracking-widest hover:bg-white/20 transition-all">
+              <MessageCircle size={16} /> Bantuan Teknis
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div className="pt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
+        <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]">
+          © {new Date().getFullYear()} MPA HIMAKOM POLITEKNIK NEGERI BANDUNG
+        </p>
+        <div className="flex gap-8">
+          <a href="#" className="text-slate-500 hover:text-slate-300 text-[10px] font-black uppercase tracking-widest">Privacy Policy</a>
+          <a href="#" className="text-slate-500 hover:text-slate-300 text-[10px] font-black uppercase tracking-widest">Terms of Service</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+);
+
+export default function Page() {
   const [view, setView] = useState('landing');
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [lastTrackingCode, setLastTrackingCode] = useState(null);
+  const [loading, setLoading] = useState(true);
 
+  // Sync auth state
   useEffect(() => {
-    if (!auth) return;
+    if (!auth) {
+      setLoading(false);
+      return;
+    }
 
-    const initAuth = async () => {
-      if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-        await signInWithCustomToken(auth, __initial_auth_token);
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      if (u) {
+        // Simple logic for admin detection - check if email exists
+        // (In production, use Custom Claims or dedicated admins collection)
+        setIsAdmin(!!u.email);
+        if (!!u.email) setView('admin');
       } else {
-        const storedAdminEmail = localStorage.getItem('adminEmail');
-        if (!storedAdminEmail) {
-          // Only sign in anonymously if not an admin
-          await signInAnonymously(auth);
-        }
+        setIsAdmin(false);
       }
-    };
-    initAuth();
-
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      const adminStatus = currentUser && currentUser.email ? true : false;
-      setIsAdmin(adminStatus);
-
-      if (adminStatus) {
-        // Store admin email to persist session
-        localStorage.setItem('adminEmail', currentUser.email);
-        setView('admin');
-      } else {
-        localStorage.removeItem('adminEmail');
-      }
+      setLoading(false);
     });
+
+    // Sign in anonymously for public users to read aspirations
+    signInAnonymously(auth).catch(err => console.log("Anon auth error:", err));
+
     return () => unsubscribe();
   }, []);
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    setIsAdmin(false);
+    setUser(null);
+    setView('landing');
+  };
 
   const handleAspirationSubmit = async (data) => {
     if (!user) return;
@@ -1756,70 +2027,50 @@ export default function App() {
       });
 
       setLastTrackingCode(code);
+
+      // Save to local history
+      const history = JSON.parse(localStorage.getItem('aspirationHistory') || '[]');
+      const newHistoryItem = {
+        code,
+        title: data.title,
+        category: data.category,
+        date: new Date().toISOString()
+      };
+      // Keep only the last 10 items
+      const updatedHistory = [newHistoryItem, ...history.filter(h => h.code !== code)].slice(0, 10);
+      localStorage.setItem('aspirationHistory', JSON.stringify(updatedHistory));
+
     } catch (e) {
       console.error("Error submitting:", e);
       alert("Gagal mengirim aspirasi. Silakan coba lagi.");
     }
   };
 
-  const handleLogout = async () => {
-    await signOut(auth);
-    await signInAnonymously(auth);
-    setView('landing');
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-16 h-16 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin"></div>
+          <p className="text-slate-400 font-black uppercase tracking-widest text-xs">Memuat Sistem...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen flex flex-col font-sans text-slate-900 selection:bg-blue-200 selection:text-blue-900 overflow-x-hidden relative">
-      <div className="fixed inset-0 bg-slate-50 -z-50" />
-
-      {!isAdmin && <ParticleBackground />}
-
+    <div className="min-h-screen font-sans selection:bg-blue-100 flex flex-col pt-20">
+      <ParticleBackground />
       <Header currentView={view} setView={setView} isAdmin={isAdmin} handleLogout={handleLogout} />
-
-      <main className="relative z-10 flex-grow">
+      
+      <main className="flex-1 relative z-10">
         {view === 'landing' && <Hero setView={setView} user={user} db={db} appId={appId} />}
-
-        {view === 'form' && (
-          <AspirationForm onSubmit={handleAspirationSubmit} />
-        )}
-
+        {view === 'form' && <AspirationForm onSubmit={handleAspirationSubmit} />}
         {view === 'tracking' && <TrackingView db={db} appId={appId} user={user} />}
-
-        {view === 'login' && (
-          <AdminLogin auth={auth} onLoginSuccess={() => setView('admin')} />
-        )}
-
-        {view === 'admin' && (
-          isAdmin ? <AdminDashboard db={db} appId={appId} user={user} /> : <div className="pt-32 text-center text-red-500 font-bold">Access Denied. Please login.</div>
-        )}
+        {view === 'login' && <AdminLogin auth={auth} onLoginSuccess={() => setView('admin')} />}
+        {view === 'admin' && isAdmin && <AdminDashboard db={db} appId={appId} user={user} />}
       </main>
 
-      {!isAdmin && (
-        <footer className="bg-slate-900 text-slate-400 py-12 border-t border-slate-800 relative z-10 mt-auto">
-          <div className="max-w-7xl mx-auto px-4 text-center">
-            <div className="flex flex-col md:flex-row justify-center items-center gap-6 md:gap-12 mb-8">
-              <div className="flex items-center gap-2 text-white font-bold text-xl">
-                <Scale size={24} className="text-blue-500" /> MPA HIMAKOM
-              </div>
-              <div className="flex items-center gap-6">
-                <a href="https://instagram.com/mpahimakom" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
-                  <Instagram size={20} /> @mpahimakom
-                </a>
-                <a href="https://wa.me/6283870405395" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
-                  <Phone size={20} /> 0838-7040-5395
-                </a>
-              </div>
-            </div>
-            <p className="mb-6 text-sm max-w-md mx-auto leading-relaxed opacity-80">
-              Media aspirasi resmi Majelis Perwakilan Anggota HIMAKOM POLBAN.
-              Dibangun dengan transparansi, anonimitas, dan kepercayaan.
-            </p>
-            <div className="text-xs text-slate-600 font-mono">
-              &copy; {new Date().getFullYear()} MPA HIMAKOM POLBAN. All rights reserved.
-            </div>
-          </div>
-        </footer>
-      )}
+      <Footer />
 
       {lastTrackingCode && (
         <SuccessModal

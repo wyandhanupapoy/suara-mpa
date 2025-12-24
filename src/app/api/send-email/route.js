@@ -43,55 +43,49 @@ export async function POST(request) {
         <html>
         <head>
           <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); color: white; padding: 30px; border-radius: 10px 10px 0 0; text-align: center; }
-            .content { background: #f8fafc; padding: 30px; border-radius: 0 0 10px 10px; }
-            .tracking-code { background: white; border: 2px dashed #3b82f6; padding: 20px; margin: 20px 0; text-align: center; border-radius: 8px; }
-            .tracking-code-text { font-size: 32px; font-weight: bold; color: #1e3a8a; letter-spacing: 2px; font-family: monospace; }
-            .info-box { background: #dbeafe; border-left: 4px solid #3b82f6; padding: 15px; margin: 15px 0; border-radius: 4px; }
-            .footer { text-align: center; padding: 20px; color: #64748b; font-size: 12px; }
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #1e293b; margin: 0; padding: 0; }
+            .container { max-width: 600px; margin: 0 auto; padding: 0; background-color: #f8fafc; }
+            .header { background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); color: white; padding: 40px 20px; text-align: center; }
+            .content { padding: 40px 30px; background: white; border-radius: 20px 20px 0 0; margin-top: -20px; box-shadow: 0 -10px 20px rgba(0,0,0,0.05); }
+            .tracking-card { background: #f1f5f9; border: 2px solid #e2e8f0; padding: 30px; margin: 30px 0; text-align: center; border-radius: 16px; }
+            .tracking-label { color: #64748b; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px; }
+            .tracking-code-display { font-size: 42px; font-weight: 900; color: #1e40af; letter-spacing: 4px; font-family: 'Courier New', Courier, monospace; margin: 10px 0; display: inline-block; padding: 10px 20px; background: white; border-radius: 8px; border: 1px solid #cbd5e1; }
+            .copy-hint { color: #3b82f6; font-size: 12px; font-weight: 600; margin-top: 10px; }
+            .btn { display: inline-block; background: #2563eb; color: white !important; padding: 16px 32px; border-radius: 12px; text-decoration: none; font-weight: 700; margin-top: 20px; }
+            .footer { text-align: center; padding: 30px; color: #94a3b8; font-size: 12px; }
+            .info-box { background: #eff6ff; border-radius: 12px; padding: 20px; margin-top: 20px; border: 1px solid #bfdbfe; }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
-              <h1 style="margin: 0; font-size: 28px;">🎯 Aspirasi Anda Telah Diterima!</h1>
-              <p style="margin: 10px 0 0 0; opacity: 0.9;">Terima kasih telah menyampaikan aspirasi Anda</p>
+              <h1 style="margin: 0; font-size: 28px; font-weight: 800;">✅ Aspirasi Diterima!</h1>
+              <p style="margin: 10px 0 0 0; opacity: 0.9; font-size: 16px;">Kode tracking Anda telah siap</p>
             </div>
             
             <div class="content">
-              <p>Halo,</p>
-              <p>Aspirasi Anda telah berhasil dikirim dan kami telah menerimanya. Gunakan kode tracking di bawah ini untuk memantau status aspirasi Anda.</p>
+              <p style="font-size: 16px; margin-bottom: 24px;">Halo,</p>
+              <p style="font-size: 16px;">Aspirasi Anda telah berhasil kami terima. Silakan simpan kode tracking di bawah ini untuk memantau status tindak lanjut kami.</p>
               
-              <div class="tracking-code">
-                <p style="margin: 0 0 10px 0; color: #64748b; font-size: 12px; font-weight: bold; text-transform: uppercase;">Kode Tracking Anda</p>
-                <div class="tracking-code-text">${trackingCode}</div>
+              <div class="tracking-card">
+                <div class="tracking-label">Kode Tracking Milik Anda</div>
+                <div class="tracking-code-display">${trackingCode}</div>
+                <div class="copy-hint">💡 Tips: Klik/Tap pada kode di atas untuk menyalin</div>
               </div>
               
               <div class="info-box">
-                <strong>📌 Cara Menggunakan Kode Tracking:</strong>
-                <ol style="margin: 10px 0 0 0; padding-left: 20px;">
-                  <li>Kunjungi website kami</li>
-                  <li>Klik menu "Cek Status"</li>
-                  <li>Masukkan kode tracking di atas</li>
-                  <li>Lihat status dan tanggapan dari tim kami</li>
-                </ol>
+                <h4 style="margin:0 0 10px 0; color: #1e40af;">📌 Cara Melacak:</h4>
+                <p style="margin:0; font-size: 14px; color: #334155;">Kunjungi website <strong>Suara MPA</strong>, pilih menu <strong>Cek Status</strong>, dan masukkan kode di atas untuk melihat respon tim kami secara real-time.</p>
               </div>
-              
-              <div style="text-align: center; margin: 20px 0;">
-                <p style="margin: 0 0 10px 0; color: #64748b;">Simpan kode ini dengan baik</p>
-              </div>
-              
-              <div class="info-box" style="background: #fef3c7; border-color: #f59e0b;">
-                <strong>⚠️ Penting:</strong>
-                <p style="margin: 5px 0 0 0;">Kode tracking ini bersifat rahasia dan hanya Anda yang memilikinya. Jangan bagikan kode ini kepada siapa pun.</p>
+
+              <div style="text-align: center; margin-top: 30px;">
+                <p style="font-size: 14px; color: #64748b;">Aspirasi Anda sangat berharga bagi kemajuan kita bersama.</p>
               </div>
             </div>
             
             <div class="footer">
-              <p>Email ini dikirim secara otomatis, mohon tidak membalas email ini.</p>
-              <p style="margin: 5px 0; color: #94a3b8;">© ${new Date().getFullYear()} MPA Aspirasi. All rights reserved.</p>
+              <p>Email ini dikirim secara otomatis. Mohon tidak membalas email ini.</p>
+              <p style="margin-top: 10px;">© ${new Date().getFullYear()} MPA HIMAKOM POLBAN</p>
             </div>
           </div>
         </body>
@@ -99,22 +93,18 @@ export async function POST(request) {
       `,
       text: `
 Aspirasi Anda Telah Diterima!
+============================
 
-Kode Tracking Anda: ${trackingCode}
+Halo, aspirasi Anda telah kami terima dengan baik.
+Gunakan kode tracking di bawah ini untuk memantau status tindak lanjut:
 
-Gunakan kode ini untuk memantau status aspirasi Anda di website kami.
+KODE TRACKING: ${trackingCode}
 
-Cara menggunakan:
-1. Kunjungi website kami
-2. Klik menu "Cek Status"
-3. Masukkan kode tracking
-4. Lihat status dan tanggapan
+Simpan kode ini untuk digunakan pada menu "Cek Status" di website kami.
 
-Simpan kode ini dengan baik. Jangan bagikan kepada siapa pun.
+Terima kasih atas partisipasi Anda.
 
----
-Email otomatis - Jangan balas email ini
-© ${new Date().getFullYear()} MPA Aspirasi
+© ${new Date().getFullYear()} MPA HIMAKOM POLBAN
       `
     };
 
