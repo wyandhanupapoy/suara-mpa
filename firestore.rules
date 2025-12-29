@@ -3,41 +3,115 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Helper function to check if user is authenticated
+    // ===================================================================
+    // HELPER FUNCTIONS
+    // ===================================================================
+    
+    // Check if user is authenticated
     function isAuthenticated() {
       return request.auth != null;
     }
     
-    // Helper function to check if user is admin (has email)
+    // Check if user is admin (has email in auth token)
     function isAdmin() {
       return request.auth != null && request.auth.token.email != null;
     }
     
-    // Artifacts collection
+    // Validate string field
+    function isValidString(field, minLen, maxLen) {
+      return field is string 
+        && field.size() >= minLen 
+        && field.size() <= maxLen;
+    }
+    
+    // Validate aspiration data structure
+    function isValidAspiration(data) {
+      return data.keys().hasAll(['category', 'title', 'message', 'status', 'created_at'])
+        && data.category is string
+        && data.category in ['Akademik', 'Organisasi', 'Fasilitas', 'Kebijakan', 'Lainnya']
+        && isValidString(data.title, 5, 200)
+        && isValidString(data.message, 10, 2000)
+        && data.status is string
+        && data.status in ['received', 'verified', 'process', 'followed_up', 'finished', 'rejected']
+        && data.tracking_code is string
+        && data.tracking_code.size() == 10
+        // Image is optional but if present must be base64 string with size limit
+        && (!data.keys().hasAny(['image']) || (data.image is string && data.image.size() <= 3000000)); // ~2MB base64
+    }
+    
+    // ===================================================================
+    // ARTIFACTS COLLECTION
+    // ===================================================================
+    
     match /artifacts/{appId} {
       
-      // Public aspirations - anyone can read, authenticated users can write
+      // -------------------------------------------------------------------
+      // PUBLIC ASPIRATIONS - Read/Write with validation
+      // -------------------------------------------------------------------
       match /public/data/aspirations/{aspirationId} {
+        // Anyone authenticated can read
         allow read: if isAuthenticated();
-        allow create: if isAuthenticated();
-        allow update, delete: if isAdmin();
+        
+        // Only authenticated users can create, with strict validation
+        allow create: if isAuthenticated()
+          && isValidAspiration(request.resource.data)
+          && request.resource.data.created_at == request.time
+          && request.resource.data.status == 'received'; // New aspirations must start as 'received'
+        
+        // Only admins can update
+        allow update: if isAdmin()
+          && isValidAspiration(request.resource.data)
+          // Prevent changing tracking code and creation time
+          && request.resource.data.tracking_code == resource.data.tracking_code
+          && request.resource.data.created_at == resource.data.created_at;
+        
+        // Only admins can delete
+        allow delete: if isAdmin();
       }
       
-      // IP tracking - authenticated users can read/write their own, admins can read all
+      // -------------------------------------------------------------------
+      // IP TRACKING - For cooldown system
+      // -------------------------------------------------------------------
       match /ip_tracking/{ipHash} {
+        // Authenticated users can read their own IP tracking
         allow read: if isAuthenticated();
-        allow write: if isAuthenticated(); // Changed: allow users to write
+        
+        // Authenticated users can write (for cooldown tracking)
+        // Validate structure
+        allow write: if isAuthenticated()
+          && request.resource.data.keys().hasAll(['last_submission_at'])
+          && request.resource.data.last_submission_at is timestamp
+          && (!request.resource.data.keys().hasAny(['submission_count_in_period']) 
+              || request.resource.data.submission_count_in_period is number)
+          && (!request.resource.data.keys().hasAny(['is_whitelisted'])
+              || request.resource.data.is_whitelisted is bool);
       }
       
-      // Admin settings - authenticated users can read, only admins can write
+      // -------------------------------------------------------------------
+      // ADMIN SETTINGS - Sensitive configuration
+      // -------------------------------------------------------------------
       match /admin/settings {
-        allow read: if isAuthenticated(); // Changed: allow users to read settings
-        allow write: if isAdmin();
+        // Authenticated users can read settings (needed for cooldown check)
+        allow read: if isAuthenticated();
+        
+        // Only admins can write
+        allow write: if isAdmin()
+          && request.resource.data.keys().hasAll(['cooldown_days', 'cooldown_enabled'])
+          && request.resource.data.cooldown_days is number
+          && request.resource.data.cooldown_days >= 0
+          && request.resource.data.cooldown_days <= 365
+          && request.resource.data.cooldown_enabled is bool
+          && (!request.resource.data.keys().hasAny(['max_aspirations_per_period'])
+              || (request.resource.data.max_aspirations_per_period is number 
+                  && request.resource.data.max_aspirations_per_period >= 1
+                  && request.resource.data.max_aspirations_per_period <= 100));
       }
       
-      // Allow reading nested documents for authenticated users
+      // -------------------------------------------------------------------
+      // CATCH-ALL - Deny everything else
+      // -------------------------------------------------------------------
       match /{document=**} {
-        allow read: if isAuthenticated();
+        allow read, write: if false;
       }
     }
   }

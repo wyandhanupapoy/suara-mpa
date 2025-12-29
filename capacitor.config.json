@@ -1,0 +1,16 @@
+{
+  "appId": "com.himakom.suarampa",
+  "appName": "Suara MPA",
+  "webDir": "public",
+  "server": {
+    "url": "https://suara-mpa.vercel.app",
+    "cleartext": true,
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": true
+  }
+}
+

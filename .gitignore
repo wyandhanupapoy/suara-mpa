@@ -31,7 +31,10 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
-.env*
+.env
+.env.local
+.env*.local
+!.env.example
 
 # vercel
 .vercel
@@ -39,3 +42,19 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Capacitor
+.capacitor
+capacitor.config.ts
+
+# Android (keep source, ignore builds)
+android/.gradle
+android/build
+android/app/build
+android/app/release
+android/app/debug
+android/.idea
+android/*.iml
+android/local.properties
+android/captures
+android/.cxx

@@ -362,7 +362,66 @@ const Header = ({ currentView, setView, isAdmin, handleLogout }) => {
 
 const PublicAspirationsTable = ({ db, appId, user }) => {
   const [data, setData] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filters, setFilters] = useState({
+    category: null,
+    status: null,
+    sortBy: 'newest'
+  });
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Import search utilities at component level
+  const processAspirations = (aspirations, { searchQuery, filters, sortBy }) => {
+    let processed = aspirations;
+
+    // Search
+    if (searchQuery && searchQuery.trim() !== '') {
+      const lowerQuery = searchQuery.toLowerCase().trim();
+      processed = processed.filter(asp => {
+        const searchFields = [
+          asp.title || '',
+          asp.description || '',
+          asp.category || '',
+          asp.tracking_code || ''
+        ].map(field => field.toLowerCase());
+        return searchFields.some(field => field.includes(lowerQuery));
+      });
+    }
+
+    // Filter by category
+    if (filters.category) {
+      processed = processed.filter(asp => asp.category === filters.category);
+    }
+
+    // Filter by status  
+    if (filters.status) {
+      processed = processed.filter(asp => asp.status === filters.status);
+    }
+
+    // Sort
+    switch (sortBy) {
+      case 'newest':
+        processed.sort((a, b) => {
+          const dateA = a.created_at?.toDate ? a.created_at.toDate() : new Date(a.created_at);
+          const dateB = b.created_at?.toDate ? b.created_at.toDate() : new Date(b.created_at);
+          return dateB - dateA;
+        });
+        break;
+      case 'oldest':
+        processed.sort((a, b) => {
+          const dateA = a.created_at?.toDate ? a.created_at.toDate() : new Date(a.created_at);
+          const dateB = b.created_at?.toDate ? b.created_at.toDate() : new Date(b.created_at);
+          return dateA - dateB;
+        });
+        break;
+      case 'most_voted':
+        processed.sort((a, b) => (b.voteCount || 0) - (a.voteCount || 0));
+        break;
+    }
+
+    return processed;
+  };
 
   useEffect(() => {
     if (!db || !user) return;
@@ -372,7 +431,17 @@ const PublicAspirationsTable = ({ db, appId, user }) => {
       orderBy('created_at', 'desc')
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const docs = snapshot.docs.map(doc => ({ 
+        id: doc.id, 
+        ...doc.data(),
+        // Map database fields to component expected fields
+        title: doc.data().title,
+        description: doc.data().description,
+        category: doc.data().category,
+        status: doc.data().status,
+        tracking_code: doc.data().tracking_code,
+        created_at: doc.data().created_at
+      }));
       setData(docs);
     }, (error) => {
       console.log("Waiting for permissions...", error.code);
@@ -380,36 +449,127 @@ const PublicAspirationsTable = ({ db, appId, user }) => {
     return () => unsubscribe();
   }, [db, appId, user]);
 
-  const filteredData = data.filter(item =>
-    item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.tracking_code.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Process data with search, filter, and sort
+  const processedData = processAspirations(data, {
+    searchQuery,
+    filters,
+    sortBy: filters.sortBy
+  });
+
+  // Paginate results
+  const totalPages = Math.ceil(processedData.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedData = processedData.slice(startIndex, startIndex + itemsPerPage);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filters]);
+
+  const handleFilterChange = (newFilters) => {
+    setFilters(newFilters);
+  };
 
   return (
     <div className="mt-10 max-w-7xl mx-auto px-4 pb-32 animate-fade-in-up [animation-delay:1000ms]">
       <div className="glass-card rounded-[2.5rem] overflow-hidden border-white/40 shadow-2xl">
-        {/* Table Header */}
-        <div className="p-8 border-b border-slate-100 flex flex-col md:flex-row justify-between items-center gap-6">
-          <div>
-            <h3 className="text-2xl font-black text-slate-900 flex items-center gap-3">
-              <div className="w-10 h-10 premium-gradient rounded-xl flex items-center justify-center text-white shadow-lg">
-                <Inbox size={22} />
-              </div>
-              Aspirasi Terbaru
-            </h3>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-2 ml-13">Suara mahasiswa yang telah masuk</p>
+        {/* Table Header with Search & Filter */}
+        <div className="p-8 border-b border-slate-100 space-y-6">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div>
+              <h3 className="text-2xl font-black text-slate-900 flex items-center gap-3">
+                <div className="w-10 h-10 premium-gradient rounded-xl flex items-center justify-center text-white shadow-lg">
+                  <Inbox size={22} />
+                </div>
+                Aspirasi Terbaru
+              </h3>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-2 ml-13">
+                {processedData.length} aspirasi ditemukan
+              </p>
+            </div>
           </div>
-          
-          <div className="relative w-full md:w-80">
-            <input
-              type="text"
-              placeholder="Cari aspirasi..."
-              className="w-full pl-12 pr-4 py-4 rounded-2xl border border-slate-100 bg-slate-50/50 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 focus:outline-none text-sm transition-all font-medium"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400" size={18} />
+
+          {/* Search Bar - Import component inline for now */}
+          <div className="relative w-full max-w-2xl">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Cari aspirasi berdasarkan judul, kategori, atau kode tracking..."
+                className="w-full pl-12 pr-12 py-3 border border-gray-200 rounded-xl 
+                         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                         bg-white shadow-sm transition-all duration-200
+                         placeholder:text-gray-400"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 p-1 
+                           hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <X className="w-4 h-4 text-gray-400" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Filter Panel - Simplified inline version */}
+          <div className="flex flex-col lg:flex-row gap-4">
+            <div className="flex-1">
+              <select
+                value={filters.category || 'Semua Kategori'}
+                onChange={(e) => handleFilterChange({ 
+                  ...filters, 
+                  category: e.target.value === 'Semua Kategori' ? null : e.target.value 
+                })}
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg
+                         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                         bg-white cursor-pointer text-sm font-medium"
+              >
+                <option value="Semua Kategori">Semua Kategori</option>
+                <option value="Akademik">Akademik</option>
+                <option value="Organisasi">Organisasi</option>
+                <option value="Fasilitas">Fasilitas</option>
+                <option value="Kebijakan">Kebijakan</option>
+                <option value="Lainnya">Lainnya</option>
+              </select>
+            </div>
+
+            <div className="flex-1">
+              <select
+                value={filters.status || 'Semua Status'}
+                onChange={(e) => handleFilterChange({ 
+                  ...filters, 
+                  status: e.target.value === 'Semua Status' ? null : e.target.value 
+                })}
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg
+                         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                         bg-white cursor-pointer text-sm font-medium"
+              >
+                <option value="Semua Status">Semua Status</option>
+                <option value="received">Diterima</option>
+                <option value="verified">Diverifikasi</option>
+                <option value="process">Dalam Proses</option>
+                <option value="followed_up">Ditindaklanjuti</option>
+                <option value="finished">Selesai</option>
+                <option value="rejected">Ditolak/Spam</option>
+              </select>
+            </div>
+
+            <div className="flex-1">
+              <select
+                value={filters.sortBy}
+                onChange={(e) => handleFilterChange({ ...filters, sortBy: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg
+                         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                         bg-white cursor-pointer text-sm font-medium"
+              >
+                <option value="newest">Terbaru</option>
+                <option value="oldest">Terlama</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -425,7 +585,7 @@ const PublicAspirationsTable = ({ db, appId, user }) => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredData.map((item) => (
+              {paginatedData.map((item) => (
                 <tr key={item.id} className="group hover:bg-blue-50/30 transition-all cursor-default">
                   <td className="px-8 py-6 whitespace-nowrap text-slate-500 font-medium">
                     {formatDate(item.created_at)}
@@ -447,7 +607,7 @@ const PublicAspirationsTable = ({ db, appId, user }) => {
                   </td>
                 </tr>
               ))}
-              {filteredData.length === 0 && (
+              {paginatedData.length === 0 && (
                 <tr>
                   <td colSpan="4" className="px-8 py-20 text-center">
                     <div className="flex flex-col items-center gap-4">
@@ -455,7 +615,7 @@ const PublicAspirationsTable = ({ db, appId, user }) => {
                         <Inbox size={32} />
                       </div>
                       <p className="text-slate-400 font-bold">
-                        {user ? (searchTerm ? "Tidak menemukan hasil pencarian." : "Belum ada aspirasi yang masuk.") : "Menghubungkan ke sistem..."}
+                        {user ? (searchQuery || filters.category || filters.status ? "Tidak menemukan hasil yang sesuai." : "Belum ada aspirasi yang masuk.") : "Menghubungkan ke sistem..."}
                       </p>
                     </div>
                   </td>
@@ -464,8 +624,63 @@ const PublicAspirationsTable = ({ db, appId, user }) => {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="bg-slate-50/50 p-6 border-t border-slate-100 flex items-center justify-between">
+            <div className="text-sm text-slate-600">
+              Menampilkan {startIndex + 1}-{Math.min(startIndex + itemsPerPage, processedData.length)} dari {processedData.length} aspirasi
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="px-4 py-2 rounded-lg border border-slate-200 text-sm font-medium
+                         disabled:opacity-50 disabled:cursor-not-allowed
+                         hover:bg-blue-50 hover:border-blue-300 transition-all"
+              >
+                Previous
+              </button>
+              
+              <div className="flex items-center gap-1">
+                {[...Array(totalPages)].map((_, i) => {
+                  const page = i + 1;
+                  // Show first page, last page, current page, and pages around current
+                  if (page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1)) {
+                    return (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`w-10 h-10 rounded-lg text-sm font-bold transition-all
+                          ${currentPage === page 
+                            ? 'bg-blue-600 text-white shadow-lg' 
+                            : 'border border-slate-200 hover:bg-blue-50 hover:border-blue-300'
+                          }`}
+                      >
+                        {page}
+                      </button>
+                    );
+                  } else if (page === currentPage - 2 || page === currentPage + 2) {
+                    return <span key={page} className="px-2 text-slate-400">...</span>;
+                  }
+                  return null;
+                })}
+              </div>
+
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className="px-4 py-2 rounded-lg border border-slate-200 text-sm font-medium
+                         disabled:opacity-50 disabled:cursor-not-allowed
+                         hover:bg-blue-50 hover:border-blue-300 transition-all"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
         
-        {filteredData.length > 0 && (
+        {processedData.length > 0 && (
           <div className="bg-slate-50/50 p-4 text-center border-t border-slate-100">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">🛡️ Semua Identitas Mahasiswa Disembunyikan</p>
           </div>

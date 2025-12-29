@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 
+// Prevent static export of API routes
+export const dynamic = 'force-dynamic';
+
 export async function GET(request) {
   try {
     // Try to get IP from various headers (for proxy/CDN scenarios)

@@ -5,18 +5,34 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "cap:add": "npx cap add android",
+    "cap:sync": "npx cap sync",
+    "cap:open": "npx cap open android",
+    "android:dev": "npm run dev",
+    "android:build": "npx cap sync && npx cap open android"
   },
   "dependencies": {
-    "firebase": "^12.6.0",
-    "lucide-react": "^0.556.0",
-    "next": "16.0.8",
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/cli": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "firebase": "^12.7.0",
+    "isomorphic-dompurify": "^2.34.0",
+    "jspdf": "^3.0.4",
+    "jspdf-autotable": "^5.0.2",
+    "lucide-react": "^0.562.0",
+    "next": "^16.1.1",
     "nodemailer": "^7.0.12",
-    "react": "19.2.1",
-    "react-dom": "19.2.1"
+    "rate-limiter-flexible": "^9.0.1",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "recharts": "^3.6.0",
+    "validator": "^13.15.26",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "cross-env": "^10.1.0",
     "tailwindcss": "^4"
   }
 }

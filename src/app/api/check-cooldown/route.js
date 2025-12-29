@@ -3,6 +3,9 @@ import { initializeApp, getApps } from 'firebase/app';
 import { getFirestore, doc, getDoc, collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import crypto from 'crypto';
 
+// Prevent static export of API routes
+export const dynamic = 'force-dynamic';
+
 // Initialize Firebase (server-side)
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
