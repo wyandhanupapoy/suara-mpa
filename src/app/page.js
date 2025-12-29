@@ -2079,7 +2079,25 @@ export default function Page() {
     });
 
     // Sign in anonymously for public users to read aspirations
-    signInAnonymously(auth).catch(err => console.log("Anon auth error:", err));
+    signInAnonymously(auth).catch(err => {
+      console.error("❌ Anonymous Authentication Error:", err);
+      console.error("📋 Error Code:", err.code);
+      console.error("📝 Error Message:", err.message);
+      
+      // Provide helpful guidance based on error type
+      if (err.code === 'auth/operation-not-allowed') {
+        console.error("\n🔧 FIX REQUIRED:");
+        console.error("Anonymous Authentication is not enabled in Firebase Console.");
+        console.error("\nSteps to fix:");
+        console.error("1. Go to https://console.firebase.google.com/");
+        console.error("2. Select your project");
+        console.error("3. Go to Authentication → Sign-in method");
+        console.error("4. Enable 'Anonymous' provider");
+        console.error("5. Refresh this page\n");
+      }
+      
+      setLoading(false);
+    });
 
     return () => unsubscribe();
   }, []);

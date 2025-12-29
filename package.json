@@ -10,7 +10,9 @@
     "cap:sync": "npx cap sync",
     "cap:open": "npx cap open android",
     "android:dev": "npm run dev",
-    "android:build": "npx cap sync && npx cap open android"
+    "android:build": "npx cap sync && npx cap open android",
+    "firebase:deploy:rules": "firebase deploy --only firestore:rules",
+    "firebase:login": "firebase login"
   },
   "dependencies": {
     "@capacitor/android": "^8.0.0",
@@ -33,6 +35,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "cross-env": "^10.1.0",
+    "firebase-tools": "^13.27.0",
     "tailwindcss": "^4"
   }
 }
