@@ -1,4 +1,7 @@
 {
+  "projects": {
+    "default": "suara-mpa"
+  },
   "firestore": {
     "rules": "firestore.rules"
   },
