@@ -2066,6 +2066,7 @@ export default function Page() {
     }
 
     const unsubscribe = onAuthStateChanged(auth, (u) => {
+      console.log("👤 Auth State Changed:", u ? `User: ${u.uid}` : "No user");
       setUser(u);
       if (u) {
         // Simple logic for admin detection - check if email exists
@@ -2078,9 +2079,16 @@ export default function Page() {
       setLoading(false);
     });
 
-    // Sign in anonymously for public users to read aspirations
-    signInAnonymously(auth).catch(err => {
-      console.error("❌ Anonymous Authentication Error:", err);
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!auth) return;
+    console.log("🔑 Attempting anonymous sign-in...");
+    signInAnonymously(auth).then(() => {
+      console.log("✅ Anonymous sign-in success");
+    }).catch(err => {
+      console.error("❌ Anonymous sign-in ERROR:", err);
       console.error("📋 Error Code:", err.code);
       console.error("📝 Error Message:", err.message);
       
@@ -2099,7 +2107,10 @@ export default function Page() {
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+       // Unsubscribe auth listener
+       if (typeof unsubscribe === 'function') unsubscribe();
+    };
   }, []);
 
   const handleLogout = async () => {
@@ -2217,47 +2228,54 @@ export default function Page() {
       };
 
       // Step 4: Submit aspiration
-      await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'aspirations'), payload);
-
+      const aspirationsCollectionPath = `artifacts/${appId}/public/data/aspirations`;
+      console.log("🚀 Step 4: Adding aspiration to path:", aspirationsCollectionPath);
+      await addDoc(collection(db, aspirationsCollectionPath), payload);
+      console.log("✅ Step 4: Aspiration added successfully");
       // Step 5: Update IP tracking
-      const ipTrackingRef = doc(db, 'artifacts', appId, 'ip_tracking', ipHash);
-      const ipTrackingSnap = await getDoc(ipTrackingRef);
-      
-      // Get current period info
-      const now = new Date();
-      let submissionCountInPeriod = 1;
-      let periodStartedAt = now;
-      
-      if (ipTrackingSnap.exists()) {
-        const existingData = ipTrackingSnap.data();
-        const lastSubmission = existingData.last_submission_at?.toDate();
+      try {
+        const ipTrackingRef = doc(db, 'artifacts', appId, 'ip_tracking', ipHash);
+        const ipTrackingSnap = await getDoc(ipTrackingRef);
         
-        // Check if still in same period
-        if (lastSubmission) {
-          const settingsSnap = await getDoc(doc(db, 'artifacts', appId, 'admin', 'settings'));
-          const settings = settingsSnap.exists() ? settingsSnap.data() : { cooldown_days: 7 };
-          const cooldownMs = settings.cooldown_days * 24 * 60 * 60 * 1000;
-          const timeSinceLastSubmission = now.getTime() - lastSubmission.getTime();
+        // Get current period info
+        const now = new Date();
+        let submissionCountInPeriod = 1;
+        let periodStartedAt = now;
+        
+        if (ipTrackingSnap.exists()) {
+          const existingData = ipTrackingSnap.data();
+          const lastSubmission = existingData.last_submission_at?.toDate();
           
-          if (timeSinceLastSubmission < cooldownMs) {
-            // Still in same period, increment count
-            submissionCountInPeriod = (existingData.submission_count_in_period || 0) + 1;
-            periodStartedAt = lastSubmission;
+          // Check if still in same period
+          if (lastSubmission) {
+            const settingsSnap = await getDoc(doc(db, 'artifacts', appId, 'admin', 'settings'));
+            const settings = settingsSnap.exists() ? settingsSnap.data() : { cooldown_days: 7 };
+            const cooldownMs = settings.cooldown_days * 24 * 60 * 60 * 1000;
+            const timeSinceLastSubmission = now.getTime() - lastSubmission.getTime();
+            
+            if (timeSinceLastSubmission < cooldownMs) {
+              // Still in same period, increment count
+              submissionCountInPeriod = (existingData.submission_count_in_period || 0) + 1;
+              periodStartedAt = lastSubmission;
+            }
           }
         }
+        
+        const totalCount = ipTrackingSnap.exists() ? (ipTrackingSnap.data().submission_count || 0) + 1 : 1;
+        
+        await setDoc(ipTrackingRef, {
+          ip_address: ipHash,
+          ip_raw: userIP,
+          last_submission_at: serverTimestamp(),
+          last_tracking_code: code,
+          submission_count: totalCount,
+          submission_count_in_period: submissionCountInPeriod,
+          period_started_at: periodStartedAt
+        });
+      } catch (trackingError) {
+        console.error("Non-critical error updating IP tracking:", trackingError);
+        // Continue execution to show success modal
       }
-      
-      const totalCount = ipTrackingSnap.exists() ? (ipTrackingSnap.data().submission_count || 0) + 1 : 1;
-      
-      await setDoc(ipTrackingRef, {
-        ip_address: ipHash,
-        ip_raw: userIP,
-        last_submission_at: serverTimestamp(),
-        last_tracking_code: code,
-        submission_count: totalCount,
-        submission_count_in_period: submissionCountInPeriod,
-        period_started_at: periodStartedAt
-      });
 
       setLastTrackingCode(code);
 

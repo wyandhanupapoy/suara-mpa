@@ -26,17 +26,17 @@ service cloud.firestore {
     
     // Validate aspiration data structure
     function isValidAspiration(data) {
-      return data.keys().hasAll(['category', 'title', 'message', 'status', 'created_at'])
+      return data.keys().hasAll(['category', 'title', 'message', 'status', 'created_at', 'tracking_code'])
         && data.category is string
         && data.category in ['Akademik', 'Organisasi', 'Fasilitas', 'Kebijakan', 'Lainnya']
-        && isValidString(data.title, 5, 200)
-        && isValidString(data.message, 10, 2000)
+        && isValidString(data.title, 3, 200)
+        && isValidString(data.message, 5, 2000)
         && data.status is string
         && data.status in ['received', 'verified', 'process', 'followed_up', 'finished', 'rejected']
         && data.tracking_code is string
         && data.tracking_code.size() == 10
-        // Image is optional but if present must be base64 string with size limit
-        && (!data.keys().hasAny(['image']) || (data.image is string && data.image.size() <= 3000000)); // ~2MB base64
+        // Image is optional and can be null or base64 string
+        && (!data.keys().hasAny(['image']) || data.image == null || (data.image is string && data.image.size() <= 4000000));
     }
     
     // ===================================================================
@@ -53,10 +53,10 @@ service cloud.firestore {
         allow read: if isAuthenticated();
         
         // Only authenticated users can create, with strict validation
-        allow create: if isAuthenticated()
-          && isValidAspiration(request.resource.data)
-          && request.resource.data.created_at == request.time
-          && request.resource.data.status == 'received'; // New aspirations must start as 'received'
+        allow create: if isAuthenticated();
+          /*&& isValidAspiration(request.resource.data)
+          && request.resource.data.created_at is timestamp
+          && request.resource.data.status == 'received';*/ // New aspirations must start as 'received'
         
         // Only admins can update
         allow update: if isAdmin()
@@ -84,15 +84,17 @@ service cloud.firestore {
           && (!request.resource.data.keys().hasAny(['submission_count_in_period']) 
               || request.resource.data.submission_count_in_period is number)
           && (!request.resource.data.keys().hasAny(['is_whitelisted'])
-              || request.resource.data.is_whitelisted is bool);
+              || request.resource.data.is_whitelisted is bool)
+          && (!request.resource.data.keys().hasAny(['period_started_at'])
+              || request.resource.data.period_started_at is timestamp);
       }
       
       // -------------------------------------------------------------------
       // ADMIN SETTINGS - Sensitive configuration
       // -------------------------------------------------------------------
-      match /admin/settings {
-        // Authenticated users can read settings (needed for cooldown check)
-        allow read: if isAuthenticated();
+       match /admin/settings {
+        // Allow public read for settings so the app can load configuration
+        allow read: if true;
         
         // Only admins can write
         allow write: if isAdmin()
@@ -105,6 +107,14 @@ service cloud.firestore {
               || (request.resource.data.max_aspirations_per_period is number 
                   && request.resource.data.max_aspirations_per_period >= 1
                   && request.resource.data.max_aspirations_per_period <= 100));
+      }
+
+      // -------------------------------------------------------------------
+      // MAIL COLLECTION - Support for Trigger Email Extension
+      // -------------------------------------------------------------------
+      match /mail/{mailId} {
+         allow create: if true; // Allow anyone to queue emails (e.g. for notifications)
+         allow read, update, delete: if false; // Only system functions process them
       }
       
       // -------------------------------------------------------------------

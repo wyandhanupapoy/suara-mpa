@@ -171,8 +171,11 @@ Terima kasih atas partisipasi Anda.
       errorMessage = 'Konfigurasi email salah. Silakan hubungi administrator.';
       statusCode = 503;
     } else if (error.code === 'ECONNECTION' || error.message === 'Email timeout') {
-      errorMessage = 'Gagal terhubung ke server email. Silakan coba lagi.';
+      errorMessage = 'Gagal terhubung ke server email (Timeout). Silakan coba lagi.';
       statusCode = 503;
+    } else if (error.response && error.response.includes('535')) {
+       errorMessage = 'Autentikasi email admin gagal. Mohon hubungi administrator.';
+       statusCode = 503;
     }
     
     return NextResponse.json(
